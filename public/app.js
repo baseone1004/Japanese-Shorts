@@ -31,7 +31,7 @@ $('category').addEventListener('change', () => localStorage.setItem('js:category
 
 async function post(url, payload, statusEl, btn, pendingMsg) {
   btn.disabled = true;
-  setStatus(statusEl, pendingMsg);
+  setStatus(statusEl, pendingMsg, 'pending');
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -50,9 +50,11 @@ async function post(url, payload, statusEl, btn, pendingMsg) {
   }
 }
 
-function setStatus(el, msg, isError = false) {
+/** kind: 'pending' | 'done' | 'error' — 스피너/체크/색상을 CSS가 결정한다. */
+function setStatus(el, msg, kind = 'done') {
   el.textContent = msg;
-  el.classList.toggle('error', isError);
+  el.classList.remove('pending', 'done', 'error');
+  el.classList.add(kind);
 }
 
 function doneMsg(body, extra = '') {
@@ -85,7 +87,7 @@ $('runGen').addEventListener('click', async () => {
     renderGen(body);
     setStatus(status, doneMsg(body, `${body.result.rows.length}행 · `));
   } catch (err) {
-    setStatus(status, err.message, true);
+    setStatus(status, err.message, 'error');
   }
 });
 
@@ -128,7 +130,7 @@ $('toMeta').addEventListener('click', () => {
 $('runTrans').addEventListener('click', async () => {
   const status = $('statusTrans');
   const script = $('scriptTrans').value.trim();
-  if (!script) return setStatus(status, '대본을 입력하세요.', true);
+  if (!script) return setStatus(status, '대본을 입력하세요.', 'error');
 
   try {
     const body = await post('/api/translate', { script }, status, $('runTrans'), '번역 중… 30초~2분 정도 걸립니다.');
@@ -136,7 +138,7 @@ $('runTrans').addEventListener('click', async () => {
     renderTrans(body);
     setStatus(status, doneMsg(body, `${body.result.rows.length}행 · `));
   } catch (err) {
-    setStatus(status, err.message, true);
+    setStatus(status, err.message, 'error');
   }
 });
 
@@ -175,7 +177,7 @@ function renderTrans(body) {
 $('runMeta').addEventListener('click', async () => {
   const status = $('statusMeta');
   const script = $('scriptMeta').value.trim();
-  if (!script) return setStatus(status, '대본 또는 영상 설명을 입력하세요.', true);
+  if (!script) return setStatus(status, '대본 또는 영상 설명을 입력하세요.', 'error');
 
   try {
     const body = await post('/api/metadata', { script }, status, $('runMeta'), '메타데이터 생성 중…');
@@ -183,7 +185,7 @@ $('runMeta').addEventListener('click', async () => {
     renderMeta(body);
     setStatus(status, doneMsg(body));
   } catch (err) {
-    setStatus(status, err.message, true);
+    setStatus(status, err.message, 'error');
   }
 });
 

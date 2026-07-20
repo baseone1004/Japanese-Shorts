@@ -8,13 +8,18 @@
   </head>
   <body>
     <header>
-      <h1>🇯🇵 일본 쇼츠 스튜디오</h1>
-      <p class="sub">카테고리만 고르면 대본 생성 → 번역 → 메타데이터까지 한 흐름으로</p>
+      <div class="header-inner">
+        <div class="brand">錯覚トリック</div>
+        <h1>일본 쇼츠 스튜디오</h1>
+        <p class="sub">
+          카테고리만 고르면 대본 생성 → 번역 → 메타데이터까지 한 흐름으로.
+        </p>
+      </div>
     </header>
 
     <main>
       <!-- 공통 설정 -->
-      <section class="panel">
+      <section class="panel settings">
         <div class="row">
           <div class="field grow">
             <label for="category">카테고리 (장르별 톤 프리셋)</label>
@@ -36,9 +41,15 @@
       </section>
 
       <nav class="tabs" id="tabs">
-        <button class="tab active" data-tab="gen">① 대본 생성</button>
-        <button class="tab" data-tab="trans">② 대본 번역</button>
-        <button class="tab" data-tab="meta">③ 메타데이터</button>
+        <button class="tab active" data-tab="gen">
+          <span class="num">STEP 01</span>대본 생성
+        </button>
+        <button class="tab" data-tab="trans">
+          <span class="num">STEP 02</span>대본 번역
+        </button>
+        <button class="tab" data-tab="meta">
+          <span class="num">STEP 03</span>메타데이터
+        </button>
       </nav>
 
       <!-- ① 대본 생성 -->
@@ -109,8 +120,8 @@
             <ol id="transTitles" class="titles"></ol>
             <h3>영상 설명문</h3>
             <div class="desc">
-              <div><span class="tag ja">JA</span><p id="transDescJa"></p></div>
-              <div><span class="tag ko">KO</span><p id="transDescKo"></p></div>
+              <div class="desc-ja"><span class="tag ja">JA</span><p id="transDescJa"></p></div>
+              <div class="desc-ko"><span class="tag ko">KO</span><p id="transDescKo"></p></div>
             </div>
             <h3>해시태그</h3>
             <p id="transTags" class="tags"></p>
