@@ -3,75 +3,171 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>일본 쇼츠 번역기</title>
+    <title>일본 쇼츠 스튜디오</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <header>
-      <h1>🇯🇵 일본 쇼츠 번역기</h1>
-      <p class="sub">한국어 대본 → 일본 현지화 메타데이터 + 초정밀 번역 표</p>
+      <h1>🇯🇵 일본 쇼츠 스튜디오</h1>
+      <p class="sub">카테고리만 고르면 대본 생성 → 번역 → 메타데이터까지 한 흐름으로</p>
     </header>
 
     <main>
+      <!-- 공통 설정 -->
       <section class="panel">
-        <div class="field">
-          <label for="category">카테고리 (장르별 톤 프리셋)</label>
-          <select id="category"></select>
-          <p class="hint" id="categoryHint"></p>
+        <div class="row">
+          <div class="field grow">
+            <label for="category">카테고리 (장르별 톤 프리셋)</label>
+            <select id="category"></select>
+          </div>
         </div>
-
-        <div class="field">
-          <label for="script">영상 대본 (타임라인 포함 가능)</label>
-          <textarea
-            id="script"
-            rows="14"
-            placeholder="00:00 안녕하세요 오늘은 3분만에 만드는 김치볶음밥 알려드릴게요&#10;00:04 재료는 딱 네 개면 됩니다&#10;..."
-          ></textarea>
-        </div>
+        <p class="hint">
+          선택한 장르에 맞춰 일본어 말투 · 훅 표현 · 해시태그 스타일이 세 모드 모두에 적용됩니다.
+        </p>
 
         <details class="field">
-          <summary>추가 지시 (선택)</summary>
+          <summary>추가 지시 (선택 · 모든 모드 공통)</summary>
           <textarea
             id="extra"
-            rows="3"
+            rows="2"
             placeholder="예: 반말 대신 존댓말로 / 제품명은 영문 그대로 유지 / 20대 여성 타겟"
           ></textarea>
         </details>
-
-        <button id="run" class="primary">번역 실행</button>
-        <p class="status" id="status"></p>
       </section>
 
-      <section class="panel results" id="results" hidden>
-        <div class="block">
-          <h2>1. 유튜브 메타데이터</h2>
-          <h3>섬네일 제목 3안</h3>
-          <ol id="titles" class="titles"></ol>
+      <nav class="tabs" id="tabs">
+        <button class="tab active" data-tab="gen">① 대본 생성</button>
+        <button class="tab" data-tab="trans">② 대본 번역</button>
+        <button class="tab" data-tab="meta">③ 메타데이터</button>
+      </nav>
 
-          <h3>영상 설명문</h3>
-          <div class="desc">
-            <div class="desc-ja"><span class="tag ja">JA</span><p id="descJa"></p></div>
-            <div class="desc-ko"><span class="tag ko">KO</span><p id="descKo"></p></div>
+      <!-- ① 대본 생성 -->
+      <section class="panel tabpane" data-pane="gen">
+        <p class="pane-desc">
+          카테고리와 주제만 주면 일본어 쇼츠 대본을 새로 씁니다. 주제를 비우면 해당 장르에서 잘 먹힐
+          주제를 AI가 직접 정합니다.
+        </p>
+        <div class="row">
+          <div class="field grow">
+            <label for="topic">주제 (비워도 됨)</label>
+            <input id="topic" type="text" placeholder="예: 편의점 재료로 만드는 야식" />
           </div>
-
-          <h3>해시태그</h3>
-          <p id="tags" class="tags"></p>
+          <div class="field">
+            <label for="seconds">길이(초)</label>
+            <input id="seconds" type="number" value="30" min="10" max="180" step="5" />
+          </div>
         </div>
+        <button id="runGen" class="primary">대본 생성</button>
+        <p class="status" id="statusGen"></p>
 
-        <div class="block">
-          <div class="block-head">
-            <h2>2. 번역 데이터 표</h2>
-            <div class="actions">
-              <button id="copyTsv">엑셀용 복사</button>
-              <button id="downloadCsv">CSV 다운로드</button>
+        <div class="results" id="resGen" hidden>
+          <div class="block">
+            <div class="block-head">
+              <h2 id="genTopic"></h2>
+              <div class="actions">
+                <button data-copy="gen">엑셀용 복사</button>
+                <button data-csv="gen">CSV</button>
+                <button id="toTranslate" class="ghost">② 번역으로 보내기</button>
+                <button id="toMeta" class="ghost">③ 메타데이터로 보내기</button>
+              </div>
+            </div>
+            <p class="hint" id="genInfo"></p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>타임라인</th><th>일본어 대사</th><th>한국어 해석</th></tr>
+                </thead>
+                <tbody id="genBody"></tbody>
+              </table>
+            </div>
+            <h3>제작 메모</h3>
+            <p class="note" id="genNote"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ② 대본 번역 -->
+      <section class="panel tabpane" data-pane="trans" hidden>
+        <p class="pane-desc">
+          한국어(또는 외래어) 대본을 일본 현지 구어체로 번역하고, 섬네일 제목 3안까지 함께 뽑습니다.
+        </p>
+        <div class="field">
+          <label for="scriptTrans">영상 대본 (타임라인 포함 가능)</label>
+          <textarea
+            id="scriptTrans"
+            rows="12"
+            placeholder="00:00 안녕하세요 오늘은 3분만에 만드는 김치볶음밥 알려드릴게요&#10;00:04 재료는 딱 네 개면 됩니다"
+          ></textarea>
+        </div>
+        <button id="runTrans" class="primary">번역 실행</button>
+        <p class="status" id="statusTrans"></p>
+
+        <div class="results" id="resTrans" hidden>
+          <div class="block">
+            <h2>유튜브 메타데이터</h2>
+            <h3>섬네일 제목 3안</h3>
+            <ol id="transTitles" class="titles"></ol>
+            <h3>영상 설명문</h3>
+            <div class="desc">
+              <div><span class="tag ja">JA</span><p id="transDescJa"></p></div>
+              <div><span class="tag ko">KO</span><p id="transDescKo"></p></div>
+            </div>
+            <h3>해시태그</h3>
+            <p id="transTags" class="tags"></p>
+          </div>
+          <div class="block">
+            <div class="block-head">
+              <h2>번역 데이터 표</h2>
+              <div class="actions">
+                <button data-copy="trans">엑셀용 복사</button>
+                <button data-csv="trans">CSV</button>
+              </div>
+            </div>
+            <p class="hint" id="transInfo"></p>
+            <div class="table-wrap">
+              <table>
+                <thead id="transHead"></thead>
+                <tbody id="transBody"></tbody>
+              </table>
             </div>
           </div>
-          <p class="hint" id="metaInfo"></p>
-          <div class="table-wrap">
-            <table id="table">
-              <thead id="thead"></thead>
-              <tbody id="tbody"></tbody>
-            </table>
+        </div>
+      </section>
+
+      <!-- ③ 메타데이터 -->
+      <section class="panel tabpane" data-pane="meta" hidden>
+        <p class="pane-desc">
+          대본이나 영상 내용 설명을 넣으면 일본어 제목 1개 · 설명문 · 태그 5개를 뽑습니다.
+        </p>
+        <div class="field">
+          <label for="scriptMeta">대본 또는 영상 내용 설명</label>
+          <textarea
+            id="scriptMeta"
+            rows="12"
+            placeholder="대본을 그대로 붙여넣거나, 영상 내용을 글로 설명해도 됩니다.&#10;예: 고양이가 냉장고 문을 스스로 여는 장면. 주인이 놀라는 리액션이 포인트."
+          ></textarea>
+        </div>
+        <button id="runMeta" class="primary">메타데이터 생성</button>
+        <p class="status" id="statusMeta"></p>
+
+        <div class="results" id="resMeta" hidden>
+          <div class="block">
+            <div class="block-head">
+              <h2>결과</h2>
+              <div class="actions"><button id="copyMeta">전체 복사</button></div>
+            </div>
+
+            <h3>1. 일본어 제목</h3>
+            <p class="meta-ja" id="metaTitleJa"></p>
+            <p class="meta-ko" id="metaTitleKo"></p>
+
+            <h3>2. 일본어 설명</h3>
+            <p class="meta-ja pre" id="metaDescJa"></p>
+            <p class="meta-ko pre" id="metaDescKo"></p>
+
+            <h3>3. 태그 (5개)</h3>
+            <p class="meta-ja" id="metaTagsJa"></p>
+            <p class="meta-ko" id="metaTagsKo"></p>
           </div>
         </div>
       </section>

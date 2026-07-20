@@ -75,6 +75,83 @@ main {
   margin-bottom: 1.1rem;
 }
 
+.row {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.row .grow {
+  flex: 1 1 240px;
+}
+
+.row .field {
+  margin-bottom: 0;
+}
+
+/* 탭 */
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.tab {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  font-weight: 600;
+  background: var(--panel);
+}
+
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pane-desc {
+  margin: 0 0 1.2rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.results {
+  margin-top: 1.8rem;
+  padding-top: 1.8rem;
+  border-top: 1px solid var(--border);
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.note {
+  font-size: 0.88rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.meta-ja {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ja);
+}
+
+.meta-ko {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.pre {
+  white-space: pre-wrap;
+  font-weight: 400;
+}
+
 label,
 summary {
   display: block;
@@ -89,6 +166,8 @@ summary {
 }
 
 select,
+input[type='text'],
+input[type='number'],
 textarea {
   width: 100%;
   background: var(--panel-2);
@@ -108,6 +187,7 @@ textarea {
 }
 
 select:focus,
+input:focus,
 textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
