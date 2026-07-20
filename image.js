@@ -105,7 +105,9 @@ export async function generateImage({ scene, overlayText = '', useCharacter = tr
       type: 'image',
       mime_type: 'image/png',
       aspect_ratio: SHORTS_ASPECT,
-      image_size: '2K',
+      // 쇼츠 최종 출력은 1080x1920이다. 9:16의 1K가 이미 그 해상도를 넘기므로
+      // 2K는 화질 이득 없이 장당 단가만 올린다.
+      image_size: '1K',
     },
   });
 
