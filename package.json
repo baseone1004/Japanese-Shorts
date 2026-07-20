@@ -1,0 +1,16 @@
+{
+  "name": "japanese-shorts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "유튜브 쇼츠 전문 한-일 번역 및 현지화 도구",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0"
+  }
+}

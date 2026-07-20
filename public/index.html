@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>일본 쇼츠 번역기</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🇯🇵 일본 쇼츠 번역기</h1>
+      <p class="sub">한국어 대본 → 일본 현지화 메타데이터 + 초정밀 번역 표</p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="field">
+          <label for="category">카테고리 (장르별 톤 프리셋)</label>
+          <select id="category"></select>
+          <p class="hint" id="categoryHint"></p>
+        </div>
+
+        <div class="field">
+          <label for="script">영상 대본 (타임라인 포함 가능)</label>
+          <textarea
+            id="script"
+            rows="14"
+            placeholder="00:00 안녕하세요 오늘은 3분만에 만드는 김치볶음밥 알려드릴게요&#10;00:04 재료는 딱 네 개면 됩니다&#10;..."
+          ></textarea>
+        </div>
+
+        <details class="field">
+          <summary>추가 지시 (선택)</summary>
+          <textarea
+            id="extra"
+            rows="3"
+            placeholder="예: 반말 대신 존댓말로 / 제품명은 영문 그대로 유지 / 20대 여성 타겟"
+          ></textarea>
+        </details>
+
+        <button id="run" class="primary">번역 실행</button>
+        <p class="status" id="status"></p>
+      </section>
+
+      <section class="panel results" id="results" hidden>
+        <div class="block">
+          <h2>1. 유튜브 메타데이터</h2>
+          <h3>섬네일 제목 3안</h3>
+          <ol id="titles" class="titles"></ol>
+
+          <h3>영상 설명문</h3>
+          <div class="desc">
+            <div class="desc-ja"><span class="tag ja">JA</span><p id="descJa"></p></div>
+            <div class="desc-ko"><span class="tag ko">KO</span><p id="descKo"></p></div>
+          </div>
+
+          <h3>해시태그</h3>
+          <p id="tags" class="tags"></p>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <h2>2. 번역 데이터 표</h2>
+            <div class="actions">
+              <button id="copyTsv">엑셀용 복사</button>
+              <button id="downloadCsv">CSV 다운로드</button>
+            </div>
+          </div>
+          <p class="hint" id="metaInfo"></p>
+          <div class="table-wrap">
+            <table id="table">
+              <thead id="thead"></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
