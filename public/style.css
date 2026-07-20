@@ -591,6 +591,82 @@ button.ghost:hover:not(:disabled) {
   color: var(--accent);
 }
 
+/* ─── 이미지 탭 ──────────────────────────────────────────────────────── */
+
+.statusbar {
+  font-size: 0.82rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+
+.statusbar:empty {
+  display: none;
+}
+
+.statusbar.ok {
+  background: color-mix(in srgb, var(--ko) 12%, transparent);
+  color: var(--ko);
+}
+
+.statusbar.warn {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  padding-bottom: 0.65rem;
+  margin-bottom: 0;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.badge {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  vertical-align: middle;
+  margin-left: 0.35rem;
+}
+
+/* 9:16 세로 이미지는 화면을 다 잡아먹지 않도록 높이를 제한한다 */
+.shot-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+
+.shot-wrap img {
+  max-height: 70vh;
+  max-width: 100%;
+  aspect-ratio: 9 / 16;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+}
+
 /* ─── 결과 ───────────────────────────────────────────────────────────── */
 
 .results {

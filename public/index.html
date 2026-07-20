@@ -50,6 +50,9 @@
         <button class="tab" data-tab="meta">
           <span class="num">STEP 03</span>메타데이터
         </button>
+        <button class="tab" data-tab="img">
+          <span class="num">STEP 04</span>이미지
+        </button>
       </nav>
 
       <!-- ① 대본 생성 -->
@@ -187,6 +190,63 @@
             <h3>3. 태그 (5개)</h3>
             <p class="meta-ja" id="metaTagsJa"></p>
             <p class="meta-ko" id="metaTagsKo"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ④ 이미지 -->
+      <section class="panel tabpane" data-pane="img" hidden>
+        <p class="pane-desc">
+          채널 캐릭터를 고정한 채로 쇼츠 사이즈(9:16) 이미지를 만듭니다. PNG로 다운로드해서 캡컷에
+          바로 넣으면 됩니다.
+        </p>
+
+        <div id="imgStatusBar" class="statusbar"></div>
+
+        <div class="field">
+          <label for="scene">장면 설명</label>
+          <textarea
+            id="scene"
+            rows="4"
+            placeholder="예: 캐릭터가 놀란 표정으로 착시 그림을 가리키고 있다. 배경은 밝은 하늘색."
+          ></textarea>
+        </div>
+
+        <div class="row">
+          <div class="field grow">
+            <label for="overlayText">화면 문구 (일본어 · 선택)</label>
+            <input id="overlayText" type="text" placeholder="예: 99%が間違える" />
+          </div>
+          <div class="field">
+            <label class="check">
+              <input id="useCharacter" type="checkbox" checked />
+              캐릭터 고정
+            </label>
+          </div>
+        </div>
+        <p class="hint">
+          화면 문구를 비워두면 글자 없는 그림만 생성됩니다. 자막은 캡컷에서 넣는 편이 정확합니다.
+        </p>
+
+        <div class="btn-row">
+          <button id="runImage" class="primary">이미지 생성</button>
+          <button id="sceneFromScript" class="ghost">① 대본에서 장면 가져오기</button>
+        </div>
+        <p class="status" id="statusImg"></p>
+
+        <div class="results" id="resImg" hidden>
+          <div class="block">
+            <div class="block-head">
+              <h2>생성 결과 <span class="badge">9:16</span></h2>
+              <div class="actions">
+                <button id="downloadImg" class="primary">PNG 다운로드</button>
+              </div>
+            </div>
+            <div class="shot-wrap"><img id="shot" alt="생성된 쇼츠 이미지" /></div>
+            <details class="field">
+              <summary>실제로 보낸 프롬프트 보기</summary>
+              <p class="note pre" id="imgPrompt"></p>
+            </details>
           </div>
         </div>
       </section>

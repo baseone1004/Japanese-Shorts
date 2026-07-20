@@ -4,3 +4,6 @@ node_modules/
 *.log
 .DS_Store
 output/
+
+# 채널 캐릭터 원본 — public 레포에 올리지 않는다 (assets/README.md 참고)
+assets/character.png

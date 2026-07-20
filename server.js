@@ -14,6 +14,7 @@ import {
   buildMetadataSystemPrompt,
   METADATA_SCHEMA,
 } from './prompt.js';
+import { generateImage, CHARACTER_PATH, SHORTS_ASPECT } from './image.js';
 
 const MODEL = 'claude-opus-4-8';
 const MAX_TOKENS = 32000;
@@ -184,8 +185,43 @@ app.post('/api/metadata', async (req, res) => {
   }
 });
 
+// ── 모드 4: 쇼츠 이미지 생성 (Gemini) ────────────────────────────────────
+app.post('/api/image', async (req, res) => {
+  try {
+    const { scene, overlayText = '', useCharacter = true } = req.body ?? {};
+    if (typeof scene !== 'string' || !scene.trim()) {
+      throw new HttpError(400, '장면 설명이 비어 있습니다.');
+    }
+
+    const out = await generateImage({
+      scene: scene.trim(),
+      overlayText,
+      useCharacter: Boolean(useCharacter),
+    });
+
+    res.json({ aspect: SHORTS_ASPECT, ...out });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+/** 캐릭터 참조 이미지가 준비돼 있는지 프론트에서 미리 알려주기 위한 엔드포인트. */
+app.get('/api/image/status', async (_req, res) => {
+  const { existsSync } = await import('node:fs');
+  res.json({
+    hasKey: Boolean(process.env.GEMINI_API_KEY),
+    hasCharacter: existsSync(CHARACTER_PATH),
+    characterPath: CHARACTER_PATH,
+    aspect: SHORTS_ASPECT,
+  });
+});
+
 function sendError(res, err) {
   if (err instanceof HttpError) {
+    return res.status(err.status).json({ error: err.message });
+  }
+  // image.js 등에서 status를 직접 붙여 던진 오류
+  if (typeof err?.status === 'number' && err.status >= 400 && err.status < 600) {
     return res.status(err.status).json({ error: err.message });
   }
 
