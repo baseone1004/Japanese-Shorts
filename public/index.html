@@ -68,7 +68,15 @@
             <input id="seconds" type="number" value="30" min="10" max="180" step="5" />
           </div>
         </div>
-        <button id="runGen" class="primary">대본 생성</button>
+
+        <div class="btn-row">
+          <button id="runTopics">💡 주제 10개 추천받기</button>
+          <button id="runGen" class="primary">대본 생성</button>
+        </div>
+        <p class="status" id="statusTopics"></p>
+
+        <div id="topicList" class="topics" hidden></div>
+
         <p class="status" id="statusGen"></p>
 
         <div class="results" id="resGen" hidden>

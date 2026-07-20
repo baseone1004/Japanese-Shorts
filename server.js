@@ -4,6 +4,8 @@ import Anthropic from '@anthropic-ai/sdk';
 
 import { CATEGORY_LIST, CATEGORIES } from './categories.js';
 import {
+  buildTopicsSystemPrompt,
+  TOPICS_SCHEMA,
   buildScriptSystemPrompt,
   buildScriptUserMessage,
   SCRIPT_SCHEMA,
@@ -101,6 +103,24 @@ function requireScript(req) {
   }
   return script.trim();
 }
+
+// ── 모드 0: 주제 추천 ────────────────────────────────────────────────────
+app.post('/api/topics', async (req, res) => {
+  try {
+    const category = validate(req);
+    requireApiKey();
+
+    const out = await callClaude({
+      system: buildTopicsSystemPrompt(category, req.body?.extraInstructions ?? ''),
+      userMessage: `카테고리: ${CATEGORIES[category].label}\n이 카테고리로 쇼츠 주제 10개를 제안해줘.`,
+      schema: TOPICS_SCHEMA,
+    });
+
+    res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
 
 // ── 모드 1: 대본 생성 ────────────────────────────────────────────────────
 app.post('/api/script', async (req, res) => {

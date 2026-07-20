@@ -71,6 +71,50 @@ function esc(s) {
   );
 }
 
+// ─── ①-A 주제 추천 ───────────────────────────────────────────────────────
+
+$('runTopics').addEventListener('click', async () => {
+  const status = $('statusTopics');
+  try {
+    const body = await post('/api/topics', {}, status, $('runTopics'), '주제 뽑는 중…');
+    renderTopics(body);
+    setStatus(status, `${body.result.topics.length}개 제안 · 카드를 누르면 그 주제로 대본을 만듭니다.`);
+  } catch (err) {
+    setStatus(status, err.message, 'error');
+  }
+});
+
+const DIFF = { easy: '쉬움', normal: '보통', hard: '어려움' };
+
+function renderTopics(body) {
+  $('topicList').innerHTML = body.result.topics
+    .map(
+      (t, i) => `
+      <button class="topic-card" data-topic="${esc(t.titleKo)}">
+        <span class="topic-num">${String(i + 1).padStart(2, '0')}</span>
+        <span class="topic-body">
+          <span class="topic-title">${esc(t.titleKo)}</span>
+          <span class="topic-hook">${esc(t.hookJa)}</span>
+          <span class="topic-reason">${esc(t.reasonKo)}</span>
+        </span>
+        <span class="topic-diff d-${t.difficulty}">${DIFF[t.difficulty] ?? t.difficulty}</span>
+      </button>`,
+    )
+    .join('');
+  $('topicList').hidden = false;
+}
+
+// 카드를 누르면 주제 칸을 채우고 곧바로 대본 생성까지 이어간다.
+$('topicList').addEventListener('click', (e) => {
+  const card = e.target.closest('.topic-card');
+  if (!card) return;
+  $('topic').value = card.dataset.topic;
+  $('topicList')
+    .querySelectorAll('.topic-card')
+    .forEach((c) => c.classList.toggle('picked', c === card));
+  $('runGen').click();
+});
+
 // ─── ① 대본 생성 ─────────────────────────────────────────────────────────
 
 $('runGen').addEventListener('click', async () => {

@@ -70,6 +70,56 @@ export function buildScriptUserMessage({ topic, seconds }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// 모드 0: 주제 추천 — 카테고리만 보고 촬영 가능한 주제 10개를 뽑는다.
+// ─────────────────────────────────────────────────────────────────────────
+
+const TOPICS_PROMPT = `[역할 및 페르소나]
+당신은 일본 유튜브 쇼츠 채널의 기획자입니다. 주어진 카테고리에 대해, 일본 시청자에게 지금 가장 잘 먹힐 쇼츠 주제를 10개 제안합니다. 인사말이나 서론 없이 즉시 목록만 만듭니다.
+
+[주제 선정 규칙]
+1. 정확히 10개. 서로 소재가 겹치지 않게 각각 다른 각도로 잡습니다.
+2. 추상적인 방향("건강한 요리")이 아니라, 그대로 촬영에 들어갈 수 있는 구체적인 한 편의 기획이어야 합니다. ("전자레인지만으로 3분 만에 만드는 계란찜" 수준의 구체성)
+3. 쇼츠는 30~60초입니다. 그 안에 기승전결이 끝나는 크기의 주제만 제안하세요.
+4. 각 주제마다 첫 3초에 쓸 훅 문장(일본어)을 함께 제시합니다.
+5. 왜 이 주제가 일본 시청자에게 먹히는지 한 줄 근거를 한국어로 답니다. 근거 없는 유행 단정은 피하고, 보편적으로 반응이 나오는 이유(공감·의외성·실용성·참여 유도 등)를 씁니다.
+6. 난이도(easy/normal/hard)는 촬영·편집 난이도 기준으로 표기합니다.
+7. 쉬운 것부터 어려운 것 순으로 정렬하지 말고, 임팩트가 큰 순으로 배치하세요.
+
+${LANG_SEPARATION_RULE}`;
+
+export const TOPICS_SCHEMA = {
+  type: 'object',
+  properties: {
+    topics: {
+      type: 'array',
+      description: '정확히 10개의 주제.',
+      items: {
+        type: 'object',
+        properties: {
+          titleKo: { type: 'string', description: '주제 한 줄 요약 (한국어).' },
+          titleJa: { type: 'string', description: '같은 주제의 일본어 표현.' },
+          hookJa: { type: 'string', description: '첫 3초에 쓸 훅 문장 (일본어).' },
+          reasonKo: { type: 'string', description: '이 주제가 먹히는 이유 한 줄 (한국어).' },
+          difficulty: {
+            type: 'string',
+            enum: ['easy', 'normal', 'hard'],
+            description: '촬영·편집 난이도.',
+          },
+        },
+        required: ['titleKo', 'titleJa', 'hookJa', 'reasonKo', 'difficulty'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['topics'],
+  additionalProperties: false,
+};
+
+export function buildTopicsSystemPrompt(categoryId, extraInstructions = '') {
+  return joinParts(TOPICS_PROMPT, categoryId, extraInstructions);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // 모드 2: 대본 번역 — 한국어(또는 외래어) 대본을 일본어로 현지화한다.
 // ─────────────────────────────────────────────────────────────────────────
 
