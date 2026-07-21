@@ -23,7 +23,20 @@ import { callClaude, assertConfigured, providerInfo, USING_KIE, MODEL } from './
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static('public'));
+
+// 로컬 도구라 캐시 이득이 없다. 앱을 고쳐도 브라우저가 옛 화면을 계속 보여주는
+// 문제가 실제로 있었으므로 정적 파일 캐시를 끈다.
+app.use(
+  express.static('public', {
+    etag: false,
+    lastModified: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    },
+  }),
+);
 
 app.get('/api/categories', (_req, res) => {
   res.json({ categories: CATEGORY_LIST, provider: providerInfo() });
@@ -64,6 +77,29 @@ function labelOf(category) {
   return typeof category === 'object' ? category.label : CATEGORIES[category].label;
 }
 
+const HANGUL = /[가-힣]/;
+
+/**
+ * ja/ko 쌍이 제대로 채워졌는지 검사한다.
+ * 모델이 한국어 칸에 일본어를 그대로 복사하거나 비워 두는 실패가 실제로 관측되어,
+ * 스키마만으로는 못 잡는 이 조건을 명시적으로 확인하고 재시도를 유도한다.
+ */
+function isValidPair(x) {
+  return Boolean(x?.ja?.trim()) && Boolean(x?.ko?.trim()) && x.ko !== x.ja && HANGUL.test(x.ko);
+}
+
+/**
+ * 배열 길이와 각 항목의 필수 문자열이 비어 있지 않은지 확인한다.
+ * KIE 경유 시 스키마는 통과하지만 값이 비거나 잘린 응답이 관측되어,
+ * 이 검사에 걸리면 llm.js가 자동으로 재시도한다.
+ */
+function allFilled(arr, keys, expectedLength) {
+  if (!Array.isArray(arr)) return false;
+  if (expectedLength != null && arr.length !== expectedLength) return false;
+  if (arr.length === 0) return false;
+  return arr.every((item) => keys.every((k) => typeof item?.[k] === 'string' && item[k].trim()));
+}
+
 /** 입력 검증을 모두 통과한 뒤, 모델 호출 직전에만 확인한다. */
 function requireApiKey() {
   assertConfigured();
@@ -87,7 +123,7 @@ app.post('/api/topics', async (req, res) => {
       system: buildTopicsSystemPrompt(category, req.body?.extraInstructions ?? ''),
       userMessage: `카테고리: ${labelOf(category)}\n이 카테고리로 쇼츠 주제 10개를 제안해줘.`,
       schema: TOPICS_SCHEMA,
-      validate: (r) => r?.topics?.length > 0,
+      validate: (r) => allFilled(r?.topics, ['titleKo', 'titleJa', 'hookJa', 'reasonKo'], 10),
     });
 
     res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
@@ -112,7 +148,7 @@ app.post('/api/script', async (req, res) => {
       system: buildScriptSystemPrompt(category, extraInstructions),
       userMessage: buildScriptUserMessage({ topic, seconds: dur }),
       schema: SCRIPT_SCHEMA,
-      validate: (r) => r?.rows?.length > 0,
+      validate: (r) => allFilled(r?.rows, ['timeline', 'ja', 'ko'], 10),
     });
 
     res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
@@ -132,7 +168,7 @@ app.post('/api/translate', async (req, res) => {
       system: buildTranslateSystemPrompt(category, req.body?.extraInstructions ?? ''),
       userMessage: script,
       schema: TRANSLATE_SCHEMA,
-      validate: (r) => r?.rows?.length > 0 && r?.titles?.length > 0,
+      validate: (r) => allFilled(r?.rows, ['ja']) && allFilled(r?.titles, ['ja', 'ko']),
     });
 
     res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
@@ -152,7 +188,12 @@ app.post('/api/metadata', async (req, res) => {
       system: buildMetadataSystemPrompt(category, req.body?.extraInstructions ?? ''),
       userMessage: script,
       schema: METADATA_SCHEMA,
-      validate: (r) => r?.titles?.length > 0 && r?.descriptions?.length > 0 && r?.tags?.length > 0,
+      validate: (r) =>
+        r?.titles?.length === 3 &&
+        r.titles.every(isValidPair) &&
+        r?.descriptions?.length === 3 &&
+        r.descriptions.every(isValidPair) &&
+        r?.tags?.length > 0,
     });
 
     res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
@@ -173,7 +214,7 @@ app.post('/api/imageprompts', async (req, res) => {
       system: buildImagePromptSystemPrompt(category, characterSheet, extraInstructions),
       userMessage: `아래 대본의 각 컷에 대한 이미지 생성 프롬프트를 만들어줘.\n\n${script}`,
       schema: IMAGE_PROMPT_SCHEMA,
-      validate: (r) => r?.prompts?.length > 0,
+      validate: (r) => allFilled(r?.prompts, ['timeline', 'sceneKo', 'prompt']),
     });
 
     res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
@@ -204,7 +245,7 @@ app.post('/api/discover', async (req, res) => {
         `일본 유튜브 쇼츠로 새로 파볼 만한 카테고리를 ${n}개 제안해줘.\n` +
         `이미 쓰고 있는 카테고리(겹치지 않게 할 것): ${existing}`,
       schema: DISCOVER_SCHEMA,
-      validate: (r) => r?.ideas?.length > 0,
+      validate: (r) => allFilled(r?.ideas, ['label', 'tone', 'notes', 'whyKo', 'riskKo']),
     });
 
     res.json(out);
