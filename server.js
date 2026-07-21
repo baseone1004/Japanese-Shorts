@@ -152,7 +152,7 @@ app.post('/api/metadata', async (req, res) => {
       system: buildMetadataSystemPrompt(category, req.body?.extraInstructions ?? ''),
       userMessage: script,
       schema: METADATA_SCHEMA,
-      validate: (r) => Boolean(r?.titleJa) && r?.tags?.length > 0,
+      validate: (r) => r?.titles?.length > 0 && r?.descriptions?.length > 0 && r?.tags?.length > 0,
     });
 
     res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });

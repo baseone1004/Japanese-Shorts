@@ -248,10 +248,14 @@ $('runMeta').addEventListener('click', async () => {
 
 function renderMeta(body) {
   const r = body.result;
-  $('metaTitleJa').textContent = r.titleJa;
-  $('metaTitleKo').textContent = r.titleKo;
-  $('metaDescJa').textContent = r.descriptionJa;
-  $('metaDescKo').textContent = r.descriptionKo;
+
+  const card = (x) =>
+    `<li><div class="angle">${esc(x.angleKo)}</div>` +
+    `<div class="t-ja">${esc(x.ja)}</div>` +
+    `<div class="t-ko">${esc(x.ko)}</div></li>`;
+
+  $('metaTitles').innerHTML = r.titles.map(card).join('');
+  $('metaDescs').innerHTML = r.descriptions.map(card).join('');
   $('metaTagsJa').textContent = r.tags.map((t) => t.ja).join(' ');
   $('metaTagsKo').textContent = r.tags.map((t) => t.ko).join(' ');
   $('resMeta').hidden = false;
@@ -261,12 +265,11 @@ $('copyMeta').addEventListener('click', async (e) => {
   if (!state.meta) return;
   const r = state.meta.result;
   const text = [
-    '## 1. 일본어 제목',
-    `* ${r.titleJa} (${r.titleKo})`,
+    '## 1. 일본어 제목 (3안)',
+    ...r.titles.map((t, i) => `${i + 1}. [${t.angleKo}] ${t.ja}\n   해석: ${t.ko}`),
     '',
-    '## 2. 일본어 설명',
-    `* ${r.descriptionJa}`,
-    `* 한국어 해석: ${r.descriptionKo}`,
+    '## 2. 일본어 설명 (3안)',
+    ...r.descriptions.map((d, i) => `${i + 1}. [${d.angleKo}] ${d.ja}\n   해석: ${d.ko}`),
     '',
     '## 3. 태그 (5개)',
     `* ${r.tags.map((t) => t.ja).join(' ')}`,

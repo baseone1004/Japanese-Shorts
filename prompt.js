@@ -372,8 +372,11 @@ const METADATA_PROMPT = `# 역할 및 페르소나
 3. 일본어와 한국어가 지정된 영역 외에서 절대 혼용되지 않도록 철저히 분리하여 작성하세요.
 
 # 출력 규칙
-- 일본어 제목 1개와 그 한국어 해석
-- 일본어 설명문 1개와 그 한국어 해석
+- 일본어 제목 **3개**와 각각의 한국어 해석. 3개는 서로 확실히 다른 각도로 만듭니다.
+  (예: 하나는 질문형, 하나는 충격/단정형, 하나는 숫자·구체성 강조형)
+  같은 문장을 어미만 바꾼 수준이면 안 됩니다.
+- 일본어 설명문 **3개**와 각각의 한국어 해석. 길이와 톤을 다르게 씁니다.
+  (예: 하나는 한 줄짜리 짧은 것, 하나는 2~3문장으로 맥락을 주는 것, 하나는 댓글 참여를 유도하는 것)
 - 태그는 반드시 정확히 5개. 각 태그는 '#'로 시작하는 일본어 태그와 그 한국어 해석을 짝지어 제공합니다.
 - 불필요한 인사말, 서론, 설명은 일절 제외합니다.
 
@@ -382,10 +385,40 @@ ${LANG_SEPARATION_RULE}`;
 export const METADATA_SCHEMA = {
   type: 'object',
   properties: {
-    titleJa: { type: 'string', description: '일본어 제목.' },
-    titleKo: { type: 'string', description: '위 제목의 한국어 해석.' },
-    descriptionJa: { type: 'string', description: '일본어 설명문.' },
-    descriptionKo: { type: 'string', description: '위 설명문의 한국어 해석.' },
+    titles: {
+      type: 'array',
+      description: '서로 다른 각도의 일본어 제목 3개.',
+      items: {
+        type: 'object',
+        properties: {
+          ja: { type: 'string', description: '일본어 제목.' },
+          ko: { type: 'string', description: '위 제목의 한국어 해석.' },
+          angleKo: {
+            type: 'string',
+            description: '이 안의 접근 방식을 한 단어~한 구로 (예: 질문형, 충격 단정형, 숫자 강조형).',
+          },
+        },
+        required: ['ja', 'ko', 'angleKo'],
+        additionalProperties: false,
+      },
+    },
+    descriptions: {
+      type: 'array',
+      description: '길이와 톤이 서로 다른 일본어 설명문 3개.',
+      items: {
+        type: 'object',
+        properties: {
+          ja: { type: 'string', description: '일본어 설명문.' },
+          ko: { type: 'string', description: '위 설명문의 한국어 해석.' },
+          angleKo: {
+            type: 'string',
+            description: '이 안의 성격을 한 구로 (예: 한 줄 요약, 맥락 설명형, 댓글 유도형).',
+          },
+        },
+        required: ['ja', 'ko', 'angleKo'],
+        additionalProperties: false,
+      },
+    },
     tags: {
       type: 'array',
       description: '반드시 정확히 5개의 태그.',
@@ -400,7 +433,7 @@ export const METADATA_SCHEMA = {
       },
     },
   },
-  required: ['titleJa', 'titleKo', 'descriptionJa', 'descriptionKo', 'tags'],
+  required: ['titles', 'descriptions', 'tags'],
   additionalProperties: false,
 };
 
