@@ -13,6 +13,11 @@ import {
   TRANSLATE_SCHEMA,
   buildMetadataSystemPrompt,
   METADATA_SCHEMA,
+  buildImagePromptSystemPrompt,
+  IMAGE_PROMPT_SCHEMA,
+  DEFAULT_CHARACTER_SHEET,
+  buildDiscoverSystemPrompt,
+  DISCOVER_SCHEMA,
 } from './prompt.js';
 import { callClaude, assertConfigured, providerInfo, USING_KIE, MODEL } from './llm.js';
 
@@ -31,13 +36,32 @@ class HttpError extends Error {
   }
 }
 
-/** 카테고리를 검증하고 정규화된 id를 반환. */
+/**
+ * 카테고리를 검증한다.
+ * 기본 프리셋이면 id 문자열을, 발굴 기능이 만든 커스텀이면 프리셋 객체를 반환한다.
+ * 프롬프트 빌더가 두 형태를 모두 받는다.
+ */
 function validate(req) {
-  const { category = 'general' } = req.body ?? {};
+  const { category = 'general', customCategory } = req.body ?? {};
+
+  if (typeof category === 'string' && category.startsWith('custom:')) {
+    const c = customCategory;
+    const ok =
+      c && typeof c.label === 'string' && typeof c.tone === 'string' &&
+      Array.isArray(c.hooks) && Array.isArray(c.tags) && typeof c.notes === 'string';
+    if (!ok) throw new HttpError(400, '커스텀 카테고리 정보가 올바르지 않습니다.');
+    return c;
+  }
+
   if (!CATEGORIES[category]) {
     throw new HttpError(400, `알 수 없는 카테고리: ${category}`);
   }
   return category;
+}
+
+/** 응답에 표시할 카테고리 이름. */
+function labelOf(category) {
+  return typeof category === 'object' ? category.label : CATEGORIES[category].label;
 }
 
 /** 입력 검증을 모두 통과한 뒤, 모델 호출 직전에만 확인한다. */
@@ -61,12 +85,12 @@ app.post('/api/topics', async (req, res) => {
 
     const out = await callClaude({
       system: buildTopicsSystemPrompt(category, req.body?.extraInstructions ?? ''),
-      userMessage: `카테고리: ${CATEGORIES[category].label}\n이 카테고리로 쇼츠 주제 10개를 제안해줘.`,
+      userMessage: `카테고리: ${labelOf(category)}\n이 카테고리로 쇼츠 주제 10개를 제안해줘.`,
       schema: TOPICS_SCHEMA,
       validate: (r) => r?.topics?.length > 0,
     });
 
-    res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
+    res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
   } catch (err) {
     sendError(res, err);
   }
@@ -91,7 +115,7 @@ app.post('/api/script', async (req, res) => {
       validate: (r) => r?.rows?.length > 0,
     });
 
-    res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
+    res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
   } catch (err) {
     sendError(res, err);
   }
@@ -111,7 +135,7 @@ app.post('/api/translate', async (req, res) => {
       validate: (r) => r?.rows?.length > 0 && r?.titles?.length > 0,
     });
 
-    res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
+    res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
   } catch (err) {
     sendError(res, err);
   }
@@ -131,7 +155,59 @@ app.post('/api/metadata', async (req, res) => {
       validate: (r) => Boolean(r?.titleJa) && r?.tags?.length > 0,
     });
 
-    res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
+    res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// ── 모드 4: 이미지 프롬프트 ──────────────────────────────────────────────
+app.post('/api/imageprompts', async (req, res) => {
+  try {
+    const category = validate(req);
+    const script = requireScript(req);
+    const { characterSheet = '', extraInstructions = '' } = req.body ?? {};
+    requireApiKey();
+
+    const out = await callClaude({
+      system: buildImagePromptSystemPrompt(category, characterSheet, extraInstructions),
+      userMessage: `아래 대본의 각 컷에 대한 이미지 생성 프롬프트를 만들어줘.\n\n${script}`,
+      schema: IMAGE_PROMPT_SCHEMA,
+      validate: (r) => r?.prompts?.length > 0,
+    });
+
+    res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+/** 화면에서 캐릭터 묘사 기본값을 채워 넣기 위한 엔드포인트. */
+app.get('/api/character-sheet', (_req, res) => {
+  res.json({ characterSheet: DEFAULT_CHARACTER_SHEET });
+});
+
+// ── 모드 5: 카테고리 발굴 ────────────────────────────────────────────────
+app.post('/api/discover', async (req, res) => {
+  try {
+    const { count = 6, extraInstructions = '' } = req.body ?? {};
+    const n = Number(count);
+    if (!Number.isFinite(n) || n < 1 || n > 12) {
+      throw new HttpError(400, '제안 개수는 1~12 사이여야 합니다.');
+    }
+    requireApiKey();
+
+    const existing = CATEGORY_LIST.map((c) => c.label).join(', ');
+    const out = await callClaude({
+      system: buildDiscoverSystemPrompt(extraInstructions),
+      userMessage:
+        `일본 유튜브 쇼츠로 새로 파볼 만한 카테고리를 ${n}개 제안해줘.\n` +
+        `이미 쓰고 있는 카테고리(겹치지 않게 할 것): ${existing}`,
+      schema: DISCOVER_SCHEMA,
+      validate: (r) => r?.ideas?.length > 0,
+    });
+
+    res.json(out);
   } catch (err) {
     sendError(res, err);
   }

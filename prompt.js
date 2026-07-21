@@ -121,6 +121,150 @@ export function buildTopicsSystemPrompt(categoryId, extraInstructions = '') {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// 모드 4: 이미지 프롬프트 — 대본의 각 컷을 그릴 이미지 프롬프트로 옮긴다.
+// 이미지 생성 API는 쓰지 않는다. 프롬프트만 만들어 주면 사용자가
+// 원하는 도구(ChatGPT, Midjourney, nano banana 등)에 붙여넣어 쓴다.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** 채널 고정 캐릭터의 기본 묘사. 화면에서 수정할 수 있고 localStorage에 저장된다. */
+export const DEFAULT_CHARACTER_SHEET = `A cute chibi-style anime girl with a short brown bob haircut and blunt bangs, big closed happy eyes (^_^), rosy blush on cheeks, wearing a blue-and-white horizontal striped short-sleeve shirt under blue denim overalls with round yellow buttons. She holds a black magic wand topped with a yellow five-pointed star. Beside her is a fluffy orange-and-cream Pomeranian dog wearing a small black top hat with a red band and round eyeglasses. A black magician's top hat with a red inner brim holds a small white rabbit. Sticker-art look: thick dark outlines, flat bright colors, soft cel shading, cheerful and friendly mood.`;
+
+const IMAGE_PROMPT_PROMPT = `[역할]
+당신은 유튜브 쇼츠용 이미지 생성 프롬프트를 쓰는 아트 디렉터입니다. 주어진 대본의 각 컷을 그림으로 만들기 위한 이미지 생성 프롬프트를 작성합니다. 인사말이나 서론 없이 즉시 작업합니다.
+
+[작성 규칙]
+1. 대본의 컷 개수와 정확히 같은 수의 프롬프트를 만듭니다. 컷 순서를 그대로 따릅니다.
+2. 프롬프트는 반드시 **영어**로 씁니다. 이미지 생성 모델은 영어에서 가장 정확하게 동작합니다.
+3. 모든 프롬프트 맨 앞에 캐릭터 고정 묘사를 그대로 넣습니다. 매 컷 동일한 문장을 반복해야 캐릭터가 흔들리지 않습니다. 임의로 외모·의상·화풍을 바꾸지 마세요.
+4. 세로 9:16 구도임을 명시합니다. ("vertical 9:16 composition")
+5. 자막이 들어갈 여백을 화면 상단에 남기도록 지시합니다. 인물은 화면 중앙 안전영역에 두고, 머리나 팔다리가 화면 끝에서 잘리지 않게 합니다.
+6. 이미지 안에 글자가 렌더링되지 않도록 명시적으로 배제합니다. ("no text, no letters, no watermark") 자막은 편집 단계에서 넣습니다.
+7. 각 컷의 대사 내용에 맞는 표정·동작·소품·배경을 구체적으로 지시합니다. 대사를 그대로 번역해 넣지 말고, 그 장면에서 **화면에 무엇이 보여야 하는지**를 씁니다.
+8. sceneKo에는 그 컷에서 무엇을 그리는지 한국어로 한 줄 요약을 넣어, 작업자가 표만 보고도 파악할 수 있게 합니다.
+
+${LANG_SEPARATION_RULE}`;
+
+export const IMAGE_PROMPT_SCHEMA = {
+  type: 'object',
+  properties: {
+    prompts: {
+      type: 'array',
+      description: '대본의 컷 수와 동일한 개수.',
+      items: {
+        type: 'object',
+        properties: {
+          timeline: { type: 'string', description: '해당 컷의 타임라인.' },
+          sceneKo: { type: 'string', description: '이 컷에서 무엇을 그리는지 한국어 한 줄 요약.' },
+          prompt: { type: 'string', description: '이미지 생성용 영문 프롬프트 전문.' },
+        },
+        required: ['timeline', 'sceneKo', 'prompt'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['prompts'],
+  additionalProperties: false,
+};
+
+export function buildImagePromptSystemPrompt(categoryId, characterSheet, extraInstructions = '') {
+  const sheet = characterSheet?.trim() || DEFAULT_CHARACTER_SHEET;
+  const withCharacter = `${IMAGE_PROMPT_PROMPT}
+
+[캐릭터 고정 묘사 — 모든 프롬프트 앞에 이 문장을 그대로 넣을 것]
+${sheet}`;
+  return joinParts(withCharacter, categoryId, extraInstructions);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 모드 5: 카테고리 발굴 — 새로 파볼 만한 장르를 제안한다.
+// ─────────────────────────────────────────────────────────────────────────
+
+const DISCOVER_PROMPT = `[역할]
+당신은 일본 유튜브 쇼츠 시장을 분석하는 채널 기획자입니다. 사용자가 새로 파볼 만한 콘텐츠 카테고리(장르)를 제안합니다. 인사말이나 서론 없이 즉시 목록만 만듭니다.
+
+[⚠️ 정직성 규칙 — 가장 중요]
+당신은 실시간 유튜브 데이터나 현재 조회수 순위를 볼 수 없습니다. 따라서:
+- "지금 일본에서 1위입니다", "최근 조회수가 급등 중입니다" 같이 **확인할 수 없는 사실을 단정하지 마세요.**
+- 대신 왜 이 장르가 일본 시청자에게 통할 만한지를 **구조적인 이유**로 설명하세요. (보편적 공감대, 참여 유도 구조, 제작 난이도 대비 임팩트, 알고리즘 친화성, 언어 장벽이 낮음 등)
+- confidence 필드에 근거의 견고함을 정직하게 표기하세요. 검증이 필요한 추측이면 낮게 잡으세요.
+
+[제안 규칙]
+1. 요청받은 개수만큼 제안합니다. 서로 확실히 다른 방향이어야 합니다.
+2. 이미 사용 중인 카테고리 목록이 주어지면 그것과 겹치지 않는 것만 제안합니다.
+3. 개인이 혼자, 큰 장비나 출연자 없이 만들 수 있는 장르를 우선합니다.
+4. 각 제안에는 그 장르로 바로 쓸 수 있는 톤·훅·해시태그·주의사항을 채웁니다. 기존 카테고리 프리셋과 같은 형식이어야 합니다.
+5. riskKo에는 이 장르의 약점이나 함정을 솔직히 적습니다. 장점만 쓰지 마세요.
+
+${LANG_SEPARATION_RULE}`;
+
+export const DISCOVER_SCHEMA = {
+  type: 'object',
+  properties: {
+    ideas: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: '영문 소문자 식별자 (예: mystery, asmr-craft).',
+          },
+          label: { type: 'string', description: '카테고리 이름 (한국어, 필요시 일본어 병기).' },
+          tone: { type: 'string', description: '이 장르의 일본어 문체·화법 지시 (한국어로 설명).' },
+          hooks: {
+            type: 'array',
+            description: '이 장르에서 통할 일본어 훅 표현 4~6개.',
+            items: { type: 'string' },
+          },
+          tags: {
+            type: 'array',
+            description: '일본어 해시태그 4~6개 (# 포함).',
+            items: { type: 'string' },
+          },
+          notes: { type: 'string', description: '현지화 주의사항 (한국어).' },
+          whyKo: { type: 'string', description: '왜 통할 만한지 구조적 이유 (한국어, 2~3문장).' },
+          riskKo: { type: 'string', description: '이 장르의 약점·함정 (한국어, 1~2문장).' },
+          effort: {
+            type: 'string',
+            enum: ['easy', 'normal', 'hard'],
+            description: '혼자 제작할 때의 난이도.',
+          },
+          confidence: {
+            type: 'string',
+            enum: ['high', 'medium', 'low'],
+            description: '근거의 견고함. 추측성이면 low.',
+          },
+        },
+        required: [
+          'id',
+          'label',
+          'tone',
+          'hooks',
+          'tags',
+          'notes',
+          'whyKo',
+          'riskKo',
+          'effort',
+          'confidence',
+        ],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['ideas'],
+  additionalProperties: false,
+};
+
+export function buildDiscoverSystemPrompt(extraInstructions = '') {
+  const parts = [DISCOVER_PROMPT];
+  if (extraInstructions.trim()) {
+    parts.push('', `[이번 작업 추가 지시]\n${extraInstructions.trim()}`);
+  }
+  parts.push('', JSON_ONLY_RULE);
+  return parts.join('\n');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // 모드 2: 대본 번역 — 한국어(또는 외래어) 대본을 일본어로 현지화한다.
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -266,9 +410,13 @@ export function buildMetadataSystemPrompt(categoryId, extraInstructions = '') {
 
 // ─────────────────────────────────────────────────────────────────────────
 
-function joinParts(basePrompt, categoryId, extraInstructions) {
-  const id = CATEGORIES[categoryId] ? categoryId : 'general';
-  const parts = [basePrompt, '', renderCategoryBlock(id)];
+function joinParts(basePrompt, category, extraInstructions) {
+  // 커스텀 프리셋 객체면 그대로, 아니면 알려진 id로 정규화한다.
+  const resolved =
+    typeof category === 'object' && category
+      ? category
+      : (CATEGORIES[category] ? category : 'general');
+  const parts = [basePrompt, '', renderCategoryBlock(resolved)];
 
   if (extraInstructions.trim()) {
     parts.push('', `[이번 작업 추가 지시]\n${extraInstructions.trim()}`);

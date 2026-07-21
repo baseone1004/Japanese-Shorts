@@ -139,9 +139,15 @@ export const CATEGORY_LIST = Object.entries(CATEGORIES).map(([id, c]) => ({
   label: c.label,
 }));
 
-/** 카테고리 프리셋을 시스템 프롬프트에 붙일 텍스트 블록으로 렌더링한다. */
-export function renderCategoryBlock(categoryId) {
-  const c = CATEGORIES[categoryId] ?? CATEGORIES.general;
+/**
+ * 카테고리 프리셋을 시스템 프롬프트에 붙일 텍스트 블록으로 렌더링한다.
+ * @param category  기본 카테고리 id 문자열, 또는 발굴 기능이 만든 커스텀 프리셋 객체.
+ */
+export function renderCategoryBlock(category) {
+  const c =
+    typeof category === 'object' && category
+      ? category
+      : (CATEGORIES[category] ?? CATEGORIES.general);
   return [
     `[카테고리 튜닝: ${c.label}]`,
     `- 문체/톤: ${c.tone}`,

@@ -50,6 +50,12 @@
         <button class="tab" data-tab="meta">
           <span class="num">STEP 03</span>메타데이터
         </button>
+        <button class="tab" data-tab="imgp">
+          <span class="num">STEP 04</span>이미지 프롬프트
+        </button>
+        <button class="tab" data-tab="disc">
+          <span class="num">＋</span>카테고리 발굴
+        </button>
       </nav>
 
       <!-- ① 대본 생성 -->
@@ -191,6 +197,95 @@
         </div>
       </section>
 
+      <!-- ④ 이미지 프롬프트 -->
+      <section class="panel tabpane" data-pane="imgp" hidden>
+        <p class="pane-desc">
+          대본의 각 컷을 그릴 <strong>이미지 생성 프롬프트</strong>를 만듭니다. 이미지를 직접
+          만들지는 않습니다 — 나온 프롬프트를 원하는 그림 도구에 붙여넣어 쓰시면 됩니다.
+        </p>
+
+        <details class="field">
+          <summary>캐릭터 고정 묘사 (모든 컷에 그대로 들어갑니다)</summary>
+          <textarea id="characterSheet" rows="6"></textarea>
+          <p class="hint">
+            채널 캐릭터를 영어로 묘사한 문장입니다. 매 컷 동일하게 들어가야 캐릭터가 흔들리지
+            않습니다. 캐릭터가 바뀌면 여기를 고치세요. 브라우저에 저장됩니다.
+            <button id="resetSheet" class="mini">기본값으로</button>
+          </p>
+        </details>
+
+        <div class="field">
+          <label for="scriptImgp">대본</label>
+          <textarea
+            id="scriptImgp"
+            rows="10"
+            placeholder="① 탭에서 만든 대본을 가져오거나 직접 붙여넣으세요."
+          ></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button id="runImgp" class="primary">이미지 프롬프트 생성</button>
+          <button id="imgpFromScript" class="ghost">① 대본 가져오기</button>
+        </div>
+        <p class="status" id="statusImgp"></p>
+
+        <div class="results" id="resImgp" hidden>
+          <div class="block">
+            <div class="block-head">
+              <h2>컷별 이미지 프롬프트</h2>
+              <div class="actions">
+                <button data-copy="imgp">엑셀용 복사</button>
+                <button data-csv="imgp">CSV</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>타임라인</th><th>장면</th><th>프롬프트 (영문)</th></tr>
+                </thead>
+                <tbody id="imgpBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ＋ 카테고리 발굴 -->
+      <section class="panel tabpane" data-pane="disc" hidden>
+        <p class="pane-desc">
+          지금 쓰는 13개 말고 <strong>새로 파볼 만한 장르</strong>를 제안받습니다. 마음에 들면
+          바로 그 카테고리로 주제·대본을 뽑을 수 있습니다.
+        </p>
+
+        <div class="warnbox">
+          ⚠️ AI는 실시간 유튜브 순위를 볼 수 없습니다. 아래 제안은 <strong>실제 트렌드 데이터가
+          아니라 구조적 근거에 기반한 가설</strong>입니다. 확신도(confidence)를 참고하시고,
+          최종 판단은 직접 유튜브에서 검색해 확인하세요.
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="discCount">제안 개수</label>
+            <input id="discCount" type="number" value="6" min="1" max="12" />
+          </div>
+          <div class="field grow">
+            <label for="discHint">방향 지정 (선택)</label>
+            <input id="discHint" type="text" placeholder="예: 얼굴 안 나오는 것 / 편집 쉬운 것 / 20대 남성 타겟" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="runDisc" class="primary">카테고리 발굴</button>
+        </div>
+        <p class="status" id="statusDisc"></p>
+
+        <div class="results" id="resDisc" hidden>
+          <div class="block">
+            <h2>제안된 카테고리</h2>
+            <div id="discList" class="ideas"></div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script src="./app.js"></script>

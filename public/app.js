@@ -1,7 +1,10 @@
 const $ = (id) => document.getElementById(id);
 
 /** 마지막 실행 결과. 복사/CSV/모드 전달에서 재사용한다. */
-const state = { gen: null, trans: null, meta: null };
+const state = { gen: null, trans: null, meta: null, imgp: null, disc: null };
+
+/** 발굴 기능으로 추가된 카테고리. 프리셋 전체를 서버로 함께 보낸다. */
+const customCategories = JSON.parse(localStorage.getItem('js:customCategories') ?? '{}');
 
 // ─── 탭 ──────────────────────────────────────────────────────────────────
 
@@ -20,9 +23,17 @@ $('tabs').addEventListener('click', (e) => {
 
 async function loadCategories() {
   const { categories } = await (await fetch('/api/categories')).json();
-  $('category').innerHTML = categories.map((c) => `<option value="${c.id}">${c.label}</option>`).join('');
+  const builtin = categories.map((c) => `<option value="${c.id}">${c.label}</option>`);
+  // 이전에 발굴해서 저장해 둔 카테고리를 목록 끝에 되살린다.
+  const custom = Object.entries(customCategories).map(
+    ([value, c]) => `<option value="${value}">⭐ ${esc(c.label)}</option>`,
+  );
+  $('category').innerHTML = builtin.concat(custom).join('');
+
   const saved = localStorage.getItem('js:category');
-  if (saved && categories.some((c) => c.id === saved)) $('category').value = saved;
+  if (saved && $('category').querySelector(`option[value="${CSS.escape(saved)}"]`)) {
+    $('category').value = saved;
+  }
 }
 
 $('category').addEventListener('change', () => localStorage.setItem('js:category', $('category').value));
@@ -38,6 +49,8 @@ async function post(url, payload, statusEl, btn, pendingMsg) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         category: $('category').value,
+        // 커스텀 카테고리는 서버에 프리셋이 없으므로 내용을 함께 보낸다.
+        customCategory: customCategories[$('category').value],
         extraInstructions: $('extra').value,
         ...payload,
       }),
@@ -263,6 +276,131 @@ $('copyMeta').addEventListener('click', async (e) => {
   flash(e.target, '복사됨!');
 });
 
+// ─── ④ 이미지 프롬프트 ───────────────────────────────────────────────────
+
+const SHEET_KEY = 'js:characterSheet';
+let defaultSheet = '';
+
+async function loadCharacterSheet() {
+  const { characterSheet } = await (await fetch('/api/character-sheet')).json();
+  defaultSheet = characterSheet;
+  $('characterSheet').value = localStorage.getItem(SHEET_KEY) ?? characterSheet;
+}
+
+$('characterSheet').addEventListener('input', () =>
+  localStorage.setItem(SHEET_KEY, $('characterSheet').value),
+);
+
+$('resetSheet').addEventListener('click', () => {
+  $('characterSheet').value = defaultSheet;
+  localStorage.setItem(SHEET_KEY, defaultSheet);
+});
+
+// ① 대본을 일본어 대사 기준으로 가져온다 (그림은 대사 내용에 맞춰 그려야 하므로).
+$('imgpFromScript').addEventListener('click', () => {
+  if (!state.gen) return setStatus($('statusImgp'), '먼저 ① 탭에서 대본을 만드세요.', 'error');
+  $('scriptImgp').value = state.gen.result.rows
+    .map((r) => `${r.timeline} ${r.ja}  (${r.ko})`)
+    .join('\n');
+  setStatus($('statusImgp'), `① 대본 ${state.gen.result.rows.length}컷을 가져왔습니다.`);
+});
+
+$('runImgp').addEventListener('click', async () => {
+  const status = $('statusImgp');
+  const script = $('scriptImgp').value.trim();
+  if (!script) return setStatus(status, '대본을 입력하거나 ①에서 가져오세요.', 'error');
+
+  try {
+    const body = await post(
+      '/api/imageprompts',
+      { script, characterSheet: $('characterSheet').value },
+      status,
+      $('runImgp'),
+      '컷별 프롬프트 작성 중…',
+    );
+    state.imgp = body;
+    $('imgpBody').innerHTML = body.result.prompts
+      .map(
+        (p) =>
+          `<tr><td class="tl">${esc(p.timeline)}</td><td>${esc(p.sceneKo)}</td><td class="prompt-cell">${esc(p.prompt)}</td></tr>`,
+      )
+      .join('');
+    $('resImgp').hidden = false;
+    setStatus(status, doneMsg(body, `${body.result.prompts.length}컷 · `));
+  } catch (err) {
+    setStatus(status, err.message, 'error');
+  }
+});
+
+// ─── ＋ 카테고리 발굴 ────────────────────────────────────────────────────
+
+const EFFORT = { easy: '쉬움', normal: '보통', hard: '어려움' };
+const CONF = { high: '근거 탄탄', medium: '보통', low: '추측성' };
+
+$('runDisc').addEventListener('click', async () => {
+  const status = $('statusDisc');
+  try {
+    const body = await post(
+      '/api/discover',
+      { count: Number($('discCount').value), extraInstructions: $('discHint').value },
+      status,
+      $('runDisc'),
+      '새 장르 찾는 중…',
+    );
+    state.disc = body;
+    renderIdeas(body.result.ideas);
+    setStatus(status, doneMsg(body, `${body.result.ideas.length}개 · `));
+  } catch (err) {
+    setStatus(status, err.message, 'error');
+  }
+});
+
+function renderIdeas(ideas) {
+  $('discList').innerHTML = ideas
+    .map(
+      (x, i) => `
+      <div class="idea">
+        <div class="idea-head">
+          <span class="idea-label">${esc(x.label)}</span>
+          <span class="idea-badges">
+            <span class="topic-diff d-${x.effort}">${EFFORT[x.effort] ?? x.effort}</span>
+            <span class="conf c-${x.confidence}">${CONF[x.confidence] ?? x.confidence}</span>
+          </span>
+        </div>
+        <p class="idea-why">${esc(x.whyKo)}</p>
+        <p class="idea-risk"><strong>약점:</strong> ${esc(x.riskKo)}</p>
+        <p class="idea-hooks">${x.hooks.map(esc).join(' / ')}</p>
+        <p class="idea-tags">${x.tags.map(esc).join(' ')}</p>
+        <button class="use-idea" data-idx="${i}">이 카테고리로 주제 뽑기</button>
+      </div>`,
+    )
+    .join('');
+  $('resDisc').hidden = false;
+}
+
+// 발굴한 카테고리를 임시 카테고리로 등록하고 ① 탭으로 이동한다.
+$('discList').addEventListener('click', (e) => {
+  const btn = e.target.closest('.use-idea');
+  if (!btn || !state.disc) return;
+  const idea = state.disc.result.ideas[Number(btn.dataset.idx)];
+
+  const sel = $('category');
+  let opt = sel.querySelector(`option[value="custom:${idea.id}"]`);
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.value = `custom:${idea.id}`;
+    opt.textContent = `⭐ ${idea.label}`;
+    sel.appendChild(opt);
+  }
+  customCategories[`custom:${idea.id}`] = idea;
+  sel.value = `custom:${idea.id}`;
+  localStorage.setItem('js:category', sel.value);
+  localStorage.setItem('js:customCategories', JSON.stringify(customCategories));
+
+  showTab('gen');
+  $('runTopics').click();
+});
+
 // ─── 표 내보내기 (생성 / 번역 공용) ──────────────────────────────────────
 
 /** 화면에 보이는 표와 동일한 2차원 배열을 만든다. */
@@ -270,6 +408,13 @@ function matrix(which) {
   if (which === 'gen') {
     const r = state.gen.result;
     return [['타임라인', '일본어 대사', '한국어 해석'], ...r.rows.map((x) => [x.timeline, x.ja, x.ko])];
+  }
+  if (which === 'imgp') {
+    const r = state.imgp.result;
+    return [
+      ['타임라인', '장면', '이미지 프롬프트'],
+      ...r.prompts.map((x) => [x.timeline, x.sceneKo, x.prompt]),
+    ];
   }
   const r = state.trans.result;
   const hasKo = r.sourceLanguage !== 'ko';
@@ -318,4 +463,5 @@ function flash(btn, text) {
 // ─── 시작 ────────────────────────────────────────────────────────────────
 
 loadCategories();
+loadCharacterSheet();
 showTab(localStorage.getItem('js:tab') ?? 'gen');
