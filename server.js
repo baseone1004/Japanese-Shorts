@@ -18,6 +18,8 @@ import {
   DEFAULT_CHARACTER_SHEET,
   buildDiscoverSystemPrompt,
   DISCOVER_SCHEMA,
+  buildSoundSystemPrompt,
+  SOUND_SCHEMA,
 } from './prompt.js';
 import { callClaude, assertConfigured, providerInfo, USING_KIE, MODEL } from './llm.js';
 
@@ -226,6 +228,29 @@ app.post('/api/imageprompts', async (req, res) => {
 /** 화면에서 캐릭터 묘사 기본값을 채워 넣기 위한 엔드포인트. */
 app.get('/api/character-sheet', (_req, res) => {
   res.json({ characterSheet: DEFAULT_CHARACTER_SHEET });
+});
+
+// ── 모드 6: 사운드 (BGM 프롬프트 + 효과음 큐) ────────────────────────────
+app.post('/api/sound', async (req, res) => {
+  try {
+    const category = validate(req);
+    const script = requireScript(req);
+    requireApiKey();
+
+    const out = await callClaude({
+      system: buildSoundSystemPrompt(category, req.body?.extraInstructions ?? ''),
+      userMessage: `아래 대본에 맞는 BGM 프롬프트와 효과음 큐를 설계해줘.\n\n${script}`,
+      schema: SOUND_SCHEMA,
+      validate: (r) =>
+        allFilled(r?.bgm, ['angleKo', 'stylePrompt', 'bpm', 'reasonKo']) &&
+        Array.isArray(r?.sfx) &&
+        Boolean(r?.noteKo?.trim()),
+    });
+
+    res.json({ category: req.body?.category ?? 'general', categoryLabel: labelOf(category), ...out });
+  } catch (err) {
+    sendError(res, err);
+  }
 });
 
 // ── 모드 5: 카테고리 발굴 ────────────────────────────────────────────────

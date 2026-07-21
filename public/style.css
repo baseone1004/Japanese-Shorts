@@ -700,6 +700,26 @@ td.prompt-cell {
   font-size: 0.8rem;
 }
 
+/* Suno에 그대로 붙여넣는 프롬프트 — 복사하기 좋게 눈에 띄게 */
+.prompt-box {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  padding: 0.7rem 0.85rem;
+  margin: 0 0 0.5rem;
+  background: var(--panel-3);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  white-space: pre-wrap;
+  user-select: all;
+}
+
+td.mono {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .use-idea {
   margin-top: 0.4rem;
   background: transparent;

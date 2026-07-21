@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
 /** 마지막 실행 결과. 복사/CSV/모드 전달에서 재사용한다. */
-const state = { gen: null, trans: null, meta: null, imgp: null, disc: null };
+const state = { gen: null, trans: null, meta: null, imgp: null, disc: null, snd: null };
 
 /** 발굴 기능으로 추가된 카테고리. 프리셋 전체를 서버로 함께 보낸다. */
 const customCategories = JSON.parse(localStorage.getItem('js:customCategories') ?? '{}');
@@ -335,6 +335,58 @@ $('runImgp').addEventListener('click', async () => {
   }
 });
 
+// ─── ⑤ 사운드 ────────────────────────────────────────────────────────────
+
+$('sndFromScript').addEventListener('click', () => {
+  if (!state.gen) return setStatus($('statusSnd'), '먼저 ① 탭에서 대본을 만드세요.', 'error');
+  $('scriptSnd').value = state.gen.result.rows
+    .map((r) => `${r.timeline} ${r.ja}  (${r.ko})`)
+    .join('\n');
+  setStatus($('statusSnd'), `① 대본 ${state.gen.result.rows.length}컷을 가져왔습니다.`);
+});
+
+$('runSnd').addEventListener('click', async () => {
+  const status = $('statusSnd');
+  const script = $('scriptSnd').value.trim();
+  if (!script) return setStatus(status, '대본을 입력하거나 ①에서 가져오세요.', 'error');
+
+  try {
+    const body = await post('/api/sound', { script }, status, $('runSnd'), '사운드 설계 중…');
+    state.snd = body;
+    renderSound(body.result);
+    setStatus(status, doneMsg(body, `효과음 ${body.result.sfx.length}개 · `));
+  } catch (err) {
+    setStatus(status, err.message, 'error');
+  }
+});
+
+function renderSound(r) {
+  $('bgmList').innerHTML = r.bgm
+    .map(
+      (b) => `
+      <div class="idea">
+        <div class="idea-head">
+          <span class="idea-label">${esc(b.angleKo)}</span>
+          <span class="idea-badges"><span class="conf">${esc(b.bpm)}</span></span>
+        </div>
+        <p class="prompt-box">${esc(b.stylePrompt)}</p>
+        <p class="idea-risk">${esc(b.reasonKo)}</p>
+      </div>`,
+    )
+    .join('');
+
+  $('sfxBody').innerHTML = r.sfx
+    .map(
+      (s) =>
+        `<tr><td class="tl">${esc(s.timeline)}</td><td>${esc(s.purposeKo)}</td>` +
+        `<td>${esc(s.searchKo)}</td><td class="mono">${esc(s.searchEn)}</td></tr>`,
+    )
+    .join('');
+
+  $('sndNote').textContent = r.noteKo;
+  $('resSnd').hidden = false;
+}
+
 // ─── ＋ 카테고리 발굴 ────────────────────────────────────────────────────
 
 const EFFORT = { easy: '쉬움', normal: '보통', hard: '어려움' };
@@ -411,6 +463,13 @@ function matrix(which) {
   if (which === 'gen') {
     const r = state.gen.result;
     return [['타임라인', '일본어 대사', '한국어 해석'], ...r.rows.map((x) => [x.timeline, x.ja, x.ko])];
+  }
+  if (which === 'snd') {
+    const r = state.snd.result;
+    return [
+      ['타임라인', '용도', '검색어(한국어)', '검색어(영어)'],
+      ...r.sfx.map((x) => [x.timeline, x.purposeKo, x.searchKo, x.searchEn]),
+    ];
   }
   if (which === 'imgp') {
     const r = state.imgp.result;

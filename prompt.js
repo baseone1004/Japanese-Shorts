@@ -176,6 +176,83 @@ ${sheet}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// 모드 6: 사운드 — Suno용 BGM 프롬프트와 컷별 효과음 큐를 만든다.
+// ─────────────────────────────────────────────────────────────────────────
+
+const SOUND_PROMPT = `[역할]
+당신은 쇼츠 영상의 사운드 디자이너입니다. 주어진 대본에 맞는 배경음악(BGM) 프롬프트와 컷별 효과음 큐를 설계합니다. 인사말이나 서론 없이 즉시 작업합니다.
+
+[⚠️ 도구별 역할을 반드시 구분할 것]
+- **Suno는 음악 생성 AI입니다.** 곡(BGM)은 잘 만들지만 "쿵", "띠링" 같은 단발 효과음은 만들지 못합니다.
+- 따라서 bgm 항목만 Suno용 프롬프트로 씁니다.
+- 효과음(sfx)은 Suno로 만들라고 하지 말고, **편집 프로그램의 효과음 라이브러리에서 찾을 검색어**를 제시합니다.
+
+[BGM 프롬프트 규칙]
+1. 서로 다른 방향으로 2개를 제안합니다. (예: 하나는 긴장감 위주, 하나는 밝고 경쾌한 쪽)
+2. stylePrompt는 반드시 **영어**로 씁니다. Suno는 영어 스타일 지시에서 가장 정확합니다.
+3. stylePrompt에는 장르, 분위기, 주요 악기, 템포(BPM), 에너지 흐름을 담습니다.
+   가사는 넣지 않습니다. 반드시 instrumental임을 명시합니다.
+4. 쇼츠는 짧고 자막이 주인공입니다. 보컬이나 복잡한 멜로디로 주의를 뺏지 않도록 지시합니다.
+5. 대본의 흐름(훅 → 전개 → 정답 공개 → 마무리)에 음악의 긴장·해소가 맞물리게 설계합니다.
+
+[효과음 큐 규칙]
+1. 모든 컷에 효과음을 넣지 마세요. **정말 필요한 지점에만** 넣습니다. 과하면 싸구려로 들립니다.
+2. 각 큐에는 그 지점에 왜 필요한지(purposeKo)를 한 줄로 적습니다.
+3. searchEn에는 효과음 라이브러리에서 그대로 검색할 **영어 키워드**를 씁니다. (예: "whoosh transition", "ding correct answer")
+4. searchKo에는 캡컷 한국어 검색창에 넣을 키워드를 씁니다.
+
+${LANG_SEPARATION_RULE}`;
+
+export const SOUND_SCHEMA = {
+  type: 'object',
+  properties: {
+    bgm: {
+      type: 'array',
+      description: '서로 다른 방향의 BGM 제안 2개.',
+      items: {
+        type: 'object',
+        properties: {
+          angleKo: { type: 'string', description: '이 안의 방향성 (예: 긴장감형, 경쾌형).' },
+          stylePrompt: {
+            type: 'string',
+            description: 'Suno에 그대로 붙여넣을 영문 스타일 프롬프트. instrumental 명시 필수.',
+          },
+          bpm: { type: 'string', description: '권장 템포 (예: 100-110 BPM).' },
+          reasonKo: { type: 'string', description: '이 음악이 이 대본에 맞는 이유 한 줄 (한국어).' },
+        },
+        required: ['angleKo', 'stylePrompt', 'bpm', 'reasonKo'],
+        additionalProperties: false,
+      },
+    },
+    sfx: {
+      type: 'array',
+      description: '효과음이 정말 필요한 지점만. 모든 컷에 넣지 않는다.',
+      items: {
+        type: 'object',
+        properties: {
+          timeline: { type: 'string', description: '효과음이 들어갈 타임라인.' },
+          purposeKo: { type: 'string', description: '이 지점에 왜 필요한지 한 줄 (한국어).' },
+          searchKo: { type: 'string', description: '캡컷 한국어 검색 키워드.' },
+          searchEn: { type: 'string', description: '효과음 라이브러리 영어 검색 키워드.' },
+        },
+        required: ['timeline', 'purposeKo', 'searchKo', 'searchEn'],
+        additionalProperties: false,
+      },
+    },
+    noteKo: {
+      type: 'string',
+      description: '믹싱 관련 짧은 조언 (한국어). 예: BGM 볼륨을 자막 낭독 대비 몇 % 정도로 둘지 등.',
+    },
+  },
+  required: ['bgm', 'sfx', 'noteKo'],
+  additionalProperties: false,
+};
+
+export function buildSoundSystemPrompt(categoryId, extraInstructions = '') {
+  return joinParts(SOUND_PROMPT, categoryId, extraInstructions);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // 모드 5: 카테고리 발굴 — 새로 파볼 만한 장르를 제안한다.
 // ─────────────────────────────────────────────────────────────────────────
 
