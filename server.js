@@ -14,8 +14,7 @@ import {
   buildMetadataSystemPrompt,
   METADATA_SCHEMA,
 } from './prompt.js';
-import { generateImage, CHARACTER_PATH, SHORTS_ASPECT } from './image.js';
-import { callClaude, assertConfigured, providerInfo, LlmError, USING_KIE, MODEL } from './llm.js';
+import { callClaude, assertConfigured, providerInfo, USING_KIE, MODEL } from './llm.js';
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -64,6 +63,7 @@ app.post('/api/topics', async (req, res) => {
       system: buildTopicsSystemPrompt(category, req.body?.extraInstructions ?? ''),
       userMessage: `카테고리: ${CATEGORIES[category].label}\n이 카테고리로 쇼츠 주제 10개를 제안해줘.`,
       schema: TOPICS_SCHEMA,
+      validate: (r) => r?.topics?.length > 0,
     });
 
     res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
@@ -88,6 +88,7 @@ app.post('/api/script', async (req, res) => {
       system: buildScriptSystemPrompt(category, extraInstructions),
       userMessage: buildScriptUserMessage({ topic, seconds: dur }),
       schema: SCRIPT_SCHEMA,
+      validate: (r) => r?.rows?.length > 0,
     });
 
     res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
@@ -107,6 +108,7 @@ app.post('/api/translate', async (req, res) => {
       system: buildTranslateSystemPrompt(category, req.body?.extraInstructions ?? ''),
       userMessage: script,
       schema: TRANSLATE_SCHEMA,
+      validate: (r) => r?.rows?.length > 0 && r?.titles?.length > 0,
     });
 
     res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
@@ -126,6 +128,7 @@ app.post('/api/metadata', async (req, res) => {
       system: buildMetadataSystemPrompt(category, req.body?.extraInstructions ?? ''),
       userMessage: script,
       schema: METADATA_SCHEMA,
+      validate: (r) => Boolean(r?.titleJa) && r?.tags?.length > 0,
     });
 
     res.json({ category, categoryLabel: CATEGORIES[category].label, ...out });
@@ -134,42 +137,11 @@ app.post('/api/metadata', async (req, res) => {
   }
 });
 
-// ── 모드 4: 쇼츠 이미지 생성 (Gemini) ────────────────────────────────────
-app.post('/api/image', async (req, res) => {
-  try {
-    const { scene, overlayText = '', useCharacter = true } = req.body ?? {};
-    if (typeof scene !== 'string' || !scene.trim()) {
-      throw new HttpError(400, '장면 설명이 비어 있습니다.');
-    }
-
-    const out = await generateImage({
-      scene: scene.trim(),
-      overlayText,
-      useCharacter: Boolean(useCharacter),
-    });
-
-    res.json({ aspect: SHORTS_ASPECT, ...out });
-  } catch (err) {
-    sendError(res, err);
-  }
-});
-
-/** 캐릭터 참조 이미지가 준비돼 있는지 프론트에서 미리 알려주기 위한 엔드포인트. */
-app.get('/api/image/status', async (_req, res) => {
-  const { existsSync } = await import('node:fs');
-  res.json({
-    hasKey: Boolean(process.env.GEMINI_API_KEY),
-    hasCharacter: existsSync(CHARACTER_PATH),
-    characterPath: CHARACTER_PATH,
-    aspect: SHORTS_ASPECT,
-  });
-});
-
 function sendError(res, err) {
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
   }
-  // image.js 등에서 status를 직접 붙여 던진 오류
+  // llm.js가 status를 직접 붙여 던진 오류
   if (typeof err?.status === 'number' && err.status >= 400 && err.status < 600) {
     return res.status(err.status).json({ error: err.message });
   }
@@ -197,10 +169,7 @@ app.listen(port, () => {
   console.log(`  텍스트: ${MODEL} (${USING_KIE ? 'KIE 경유 — 약 60% 저렴' : 'Anthropic 직접'})\n`);
 
   if (!USING_KIE && !process.env.ANTHROPIC_API_KEY) {
-    console.warn('  ⚠  텍스트 API 키가 없습니다. .env에 KIE_API_KEY 또는 ANTHROPIC_API_KEY를 넣으세요.');
-  }
-  if (!process.env.GEMINI_API_KEY) {
-    console.warn('  ⚠  GEMINI_API_KEY가 없습니다. ④ 이미지 탭은 동작하지 않습니다.');
+    console.warn('  ⚠  API 키가 없습니다. .env에 KIE_API_KEY 또는 ANTHROPIC_API_KEY를 넣으세요.');
   }
   console.log('');
 });

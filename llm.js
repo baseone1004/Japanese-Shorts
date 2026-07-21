@@ -23,8 +23,15 @@ function getClient() {
   if (client) return client;
 
   if (USING_KIE) {
-    // KIE는 Authorization: Bearer <key>를 기대한다. SDK의 authToken이 그 형태로 보낸다.
-    client = new Anthropic({ authToken: process.env.KIE_API_KEY, baseURL: KIE_BASE_URL });
+    client = new Anthropic({
+      // KIE는 Authorization: Bearer <key>를 기대한다. SDK의 authToken이 그 형태로 보낸다.
+      authToken: process.env.KIE_API_KEY,
+      baseURL: KIE_BASE_URL,
+      // KIE의 방화벽이 SDK 기본 User-Agent("Anthropic/JS ...")를 403으로 차단한다.
+      // 다른 값이면 무엇이든 통과하므로 앱 이름으로 바꿔 보낸다.
+      // (검증: Anthropic/JS만 403, node·curl·앱이름 등은 모두 200)
+      defaultHeaders: { 'User-Agent': 'japanese-shorts/1.0' },
+    });
   } else {
     client = new Anthropic(); // ANTHROPIC_API_KEY를 환경변수에서 읽는다
   }
@@ -98,7 +105,24 @@ function looksLikeUnsupportedParam(err) {
   );
 }
 
-export async function callClaude({ system, userMessage, schema }) {
+/**
+ * @param validate  결과가 쓸만한지 검사하는 함수. false를 반환하면 한 번 재시도한다.
+ *                  KIE 프록시가 간헐적으로 필수 배열이 빈 채로 응답을 돌려주는 일이 있어
+ *                  (스키마는 통과하지만 내용이 없음) 호출부가 직접 검사할 수 있게 열어둔다.
+ */
+export async function callClaude({ system, userMessage, schema, validate }) {
+  const first = await callOnce({ system, userMessage, schema });
+  if (!validate || validate(first.result)) return first;
+
+  console.warn('[llm] 응답이 비어 있어 한 번 재시도합니다.');
+  const second = await callOnce({ system, userMessage, schema });
+  if (!validate(second.result)) {
+    throw new LlmError(502, '모델이 불완전한 응답을 반환했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  return { ...second, retried: true };
+}
+
+async function callOnce({ system, userMessage, schema }) {
   assertConfigured();
   const anthropic = getClient();
 

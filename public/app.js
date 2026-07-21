@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
 /** 마지막 실행 결과. 복사/CSV/모드 전달에서 재사용한다. */
-const state = { gen: null, trans: null, meta: null, img: null };
+const state = { gen: null, trans: null, meta: null };
 
 // ─── 탭 ──────────────────────────────────────────────────────────────────
 
@@ -263,85 +263,6 @@ $('copyMeta').addEventListener('click', async (e) => {
   flash(e.target, '복사됨!');
 });
 
-// ─── ④ 이미지 ────────────────────────────────────────────────────────────
-
-/** 서버에 API 키와 캐릭터 파일이 준비됐는지 미리 확인해 안내한다. */
-async function loadImageStatus() {
-  try {
-    const s = await (await fetch('/api/image/status')).json();
-    const missing = [];
-    if (!s.hasKey) missing.push('GEMINI_API_KEY가 .env에 없습니다');
-    if (!s.hasCharacter) missing.push(`캐릭터 이미지가 없습니다 → ${s.characterPath}`);
-
-    const bar = $('imgStatusBar');
-    if (missing.length) {
-      bar.className = 'statusbar warn';
-      bar.textContent = '⚠ ' + missing.join(' · ');
-    } else {
-      bar.className = 'statusbar ok';
-      bar.textContent = `✓ 캐릭터 고정 준비 완료 · 출력 비율 ${s.aspect}`;
-    }
-  } catch {
-    /* 상태 표시는 부가 기능이므로 실패해도 앱은 그대로 쓴다 */
-  }
-}
-
-// 생성한 대본의 첫 컷을 장면 설명 초안으로 가져온다.
-$('sceneFromScript').addEventListener('click', () => {
-  if (!state.gen) {
-    return setStatus($('statusImg'), '먼저 ① 탭에서 대본을 생성하세요.', 'error');
-  }
-  const r = state.gen.result;
-  $('scene').value = `${r.topicKo} — 첫 장면: ${r.rows[0].ko}`;
-  $('overlayText').value = r.rows[0].ja.replace(/\s*\/\s*/g, ' ');
-  setStatus($('statusImg'), '① 대본의 첫 컷을 가져왔습니다. 필요하면 고쳐서 생성하세요.');
-});
-
-$('runImage').addEventListener('click', async () => {
-  const status = $('statusImg');
-  const scene = $('scene').value.trim();
-  if (!scene) return setStatus(status, '장면 설명을 입력하세요.', 'error');
-
-  const btn = $('runImage');
-  btn.disabled = true;
-  setStatus(status, '이미지 생성 중… 20초~1분 정도 걸립니다.', 'pending');
-
-  try {
-    const res = await fetch('/api/image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        scene,
-        overlayText: $('overlayText').value,
-        useCharacter: $('useCharacter').checked,
-      }),
-    });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-
-    state.img = body;
-    $('shot').src = `data:${body.mimeType};base64,${body.data}`;
-    $('imgPrompt').textContent = body.prompt;
-    $('resImg').hidden = false;
-    setStatus(
-      status,
-      `완료 · ${body.aspect}` + (body.usedCharacter ? ' · 캐릭터 고정 적용' : ' · 캐릭터 없이 생성'),
-    );
-  } catch (err) {
-    setStatus(status, err.message, 'error');
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-$('downloadImg').addEventListener('click', () => {
-  if (!state.img) return;
-  const a = document.createElement('a');
-  a.href = `data:${state.img.mimeType};base64,${state.img.data}`;
-  a.download = `shorts-${Date.now()}.png`;
-  a.click();
-});
-
 // ─── 표 내보내기 (생성 / 번역 공용) ──────────────────────────────────────
 
 /** 화면에 보이는 표와 동일한 2차원 배열을 만든다. */
@@ -397,5 +318,4 @@ function flash(btn, text) {
 // ─── 시작 ────────────────────────────────────────────────────────────────
 
 loadCategories();
-loadImageStatus();
 showTab(localStorage.getItem('js:tab') ?? 'gen');
