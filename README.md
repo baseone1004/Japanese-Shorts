@@ -81,18 +81,21 @@
 | 파일 | 하는 일 |
 | --- | --- |
 | **`start.vbs`** | 실행 — 검은 창 없이 앱 창으로 열립니다 |
-| **`stop.vbs`** | 종료 |
+| `stop.vbs` | 서버 종료 (평소엔 쓸 일 없음) |
 | `start.bat` | 문제가 생겼을 때 오류를 확인하는 용도 (검은 창이 뜹니다) |
 
 **`start.vbs` 를 더블클릭**하면 검은 콘솔 창 없이 주소창도 없는 앱 창으로 뜹니다
 (Chrome 또는 Edge의 앱 모드). 서버는 뒤에서 조용히 돌아갑니다.
 
-끝낼 때는 **`stop.vbs`** 를 더블클릭하세요. 앱 창만 닫으면 서버는 계속 떠 있습니다.
+**따로 끌 필요는 없습니다.** 앱 창을 닫아도 서버는 남지만, 버튼을 눌러야만 API를
+호출하므로 켜둬도 비용이 발생하지 않고 메모리도 50~80MB 수준이다. PC를 끄면 사라진다.
+이미 켜져 있으면 `start.vbs`는 서버를 새로 띄우지 않고 창만 연다.
+
+프로그램이 이상하게 동작해서 껐다 켜야 할 때만 `stop.vbs`를 쓰면 된다.
 
 ### 바탕화면 바로 가기
 
-바탕화면에 **`일본 쇼츠 스튜디오`**(실행)와 **`일본 쇼츠 종료`** 바로 가기가 놓여 있습니다.
-바탕화면에서 바로 더블클릭하면 됩니다.
+바탕화면의 **`일본 쇼츠 스튜디오`** 를 더블클릭하면 실행됩니다.
 
 바로 가기가 사라졌거나 다시 만들려면 PowerShell에서:
 
@@ -101,9 +104,6 @@ $d = [Environment]::GetFolderPath('Desktop'); $p = 'C:\projects\Japanese-Shorts'
 $sh = New-Object -ComObject WScript.Shell
 $s = $sh.CreateShortcut("$d\일본 쇼츠 스튜디오.lnk")
 $s.TargetPath = "$p\start.vbs"; $s.WorkingDirectory = $p; $s.IconLocation = "$p\icon.ico,0"; $s.Save()
-$s = $sh.CreateShortcut("$d\일본 쇼츠 종료.lnk")
-$s.TargetPath = "$p\stop.vbs"; $s.WorkingDirectory = $p
-$s.IconLocation = "$env:SystemRoot\System32\shell32.dll,131"; $s.Save()
 ```
 
 > 프로그램 파일(`start.vbs` 등) 자체를 바탕화면으로 **옮기면 안 됩니다.**
