@@ -196,8 +196,21 @@ export function buildTopicsSystemPrompt(categoryId, extraInstructions = '') {
 // 원하는 도구(ChatGPT, Midjourney, nano banana 등)에 붙여넣어 쓴다.
 // ─────────────────────────────────────────────────────────────────────────
 
-/** 채널 고정 캐릭터의 기본 묘사. 화면에서 수정할 수 있고 localStorage에 저장된다. */
-export const DEFAULT_CHARACTER_SHEET = `A cute chibi-style anime girl with a short brown bob haircut and blunt bangs, big closed happy eyes (^_^), rosy blush on cheeks, wearing a blue-and-white horizontal striped short-sleeve shirt under blue denim overalls with round yellow buttons. She holds a black magic wand topped with a yellow five-pointed star. Beside her is a fluffy orange-and-cream Pomeranian dog wearing a small black top hat with a red band and round eyeglasses. A black magician's top hat with a red inner brim holds a small white rabbit. Sticker-art look: thick dark outlines, flat bright colors, soft cel shading, cheerful and friendly mood.`;
+/**
+ * 채널 고정 캐릭터의 기본 묘사. 화면에서 수정할 수 있고 localStorage에 저장된다.
+ * 세 캐릭터(소녀·포메라니안·토끼)와 화풍·배경까지 명시해야 컷마다 흔들리지 않는다.
+ */
+export const DEFAULT_CHARACTER_SHEET = `CHANNEL MASCOTS — always draw these three characters exactly as described, every time:
+
+(1) GIRL — cute chibi anime style. Short chestnut-brown bob haircut with straight blunt bangs and softly rounded ends. Eyes closed in happy upward arcs (^_^). Wide open joyful smile. Two large soft-pink oval blush marks, one on each cheek. Wears a blue-and-white horizontal striped short-sleeve tee under blue denim overalls with round orange-yellow buttons on the straps, a front pocket and visible stitching. Holds up a slim black magic wand topped with a chunky golden-yellow five-pointed star.
+
+(2) DOG — fluffy Pomeranian with ginger-orange fur and a cream-white chest, muzzle and paws. Wears round thin-rimmed eyeglasses and a small black top hat with a red band, tilted slightly. Big round glossy black eyes with white highlights, open smiling mouth with a small pink tongue. Stands beside the girl on her right.
+
+(3) RABBIT — small white rabbit with pink inner ears, popping up out of a black magician's top hat. The hat has a bright red inner lining and a small red ribbon on its side.
+
+ART STYLE — die-cut sticker look with a clean thick white outline around the whole group. Thick dark outlines on every shape, flat vivid colors, soft cel shading, no gradients or realistic texture. Cheerful and friendly mood.
+
+BACKGROUND — light sky-blue, decorated with small white four-point sparkles, a few yellow dots and one golden star.`;
 
 const IMAGE_PROMPT_PROMPT = `[역할]
 당신은 유튜브 쇼츠용 이미지 생성 프롬프트를 쓰는 아트 디렉터입니다. 주어진 대본의 각 컷을 그림으로 만들기 위한 이미지 생성 프롬프트를 작성합니다. 인사말이나 서론 없이 즉시 작업합니다.

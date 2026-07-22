@@ -282,12 +282,24 @@ $('copyMeta').addEventListener('click', async (e) => {
 // ─── ④ 이미지 프롬프트 ───────────────────────────────────────────────────
 
 const SHEET_KEY = 'js:characterSheet';
+/** 저장 당시의 기본값. 사용자가 직접 고쳤는지 판별하는 데 쓴다. */
+const SHEET_BASE_KEY = 'js:characterSheetBase';
 let defaultSheet = '';
 
 async function loadCharacterSheet() {
   const { characterSheet } = await (await fetch('/api/character-sheet')).json();
   defaultSheet = characterSheet;
-  $('characterSheet').value = localStorage.getItem(SHEET_KEY) ?? characterSheet;
+
+  const saved = localStorage.getItem(SHEET_KEY);
+  const savedBase = localStorage.getItem(SHEET_BASE_KEY);
+
+  // 사용자가 손대지 않은 상태라면 새 기본값으로 갱신한다.
+  // (기본 묘사를 개선해도 브라우저에 옛 버전이 남아 반영되지 않던 문제)
+  const untouched = saved == null || saved === savedBase;
+  $('characterSheet').value = untouched ? characterSheet : saved;
+
+  localStorage.setItem(SHEET_BASE_KEY, characterSheet);
+  if (untouched) localStorage.setItem(SHEET_KEY, characterSheet);
 }
 
 $('characterSheet').addEventListener('input', () =>
