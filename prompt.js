@@ -6,6 +6,66 @@ const LANG_SEPARATION_RULE = `[⚠️ 절대 주의사항 - 언어 분리]
 - 일본어와 한국어를 한 필드나 한 문장 안에 실수로 혼용하는 일이 절대 없도록 철저히 검증 후 출력하세요.
 - 고유명사·브랜드명 등 원어 표기가 필수인 경우만 예외로 허용합니다.`;
 
+/**
+ * 이 앱의 핵심 가치는 "번역체가 아닌 일본 현지인의 일본어"다.
+ * "자연스럽게 쓰라"는 추상적 지시로는 부족해서, 번역체가 드러나는 구체적 패턴을
+ * 짚고 출력 전 자가 점검하게 한다. 모든 모드에 공통으로 주입된다.
+ */
+const NATIVE_JA_RULE = `[🇯🇵 일본어 품질 — 이 규칙이 이 작업의 전부입니다]
+
+당신이 쓴 일본어를 일본인이 읽었을 때 "아, 이거 번역한 거네"라는 느낌이 조금이라도 들면 실패입니다.
+한국어를 일본어로 바꾸는 게 아니라, **일본인이 처음부터 일본어로 쓴 문장**을 만드세요.
+한국어 원문의 어순·구조를 따라가지 말고, 의미만 가져와서 일본어로 새로 쓰십시오.
+
+■ 번역체가 드러나는 대표적인 신호 (반드시 피할 것)
+
+1. **자막·제목에서의 「あなた」** — 가장 흔한 번역체 신호입니다.
+   한국어의 '당신/여러분'을 그대로 옮기면 あなた가 됩니다. 일본어는 주어를 생략하는 언어라
+   화면 자막에서 あなた가 나오면 번역한 티가 확 납니다.
+   ✗ あなたはどう思いますか？
+   ○ どう思う？   /   ○ みんなはどうだった？
+   (단, 설명문에서는 「あなたも〜」가 자연스러우므로 예외입니다. 아래 2번 참고)
+
+2. **말투는 쓰이는 위치에 따라 다릅니다. 하나로 통일하지 마세요.**
+   - **화면 자막·대본·섬네일 제목** → 반말·체언종지. です・ます를 쓰면 딱딱해집니다.
+     ✗ この料理はとても簡単に作れます。
+     ○ これ、めっちゃ簡単に作れる。
+   - **영상 설명문(description)** → です・ます체가 자연스럽습니다. 일본 유튜브 설명문은
+     시청자에게 안내하는 자리라 정중체가 표준입니다. 이 자리에서는 「あなた」도 허용됩니다.
+     ○ 今回は〇〇を紹介します。あなたも試してみましたか？ぜひコメントで教えてください！
+   즉 아래 3번·4번의 반말 규칙은 **자막·제목에만** 적용하고, 설명문에는 적용하지 마세요.
+
+3. **조사를 다 붙인 딱딱한 문장** — 자막은 조사를 떨어뜨리고 짧게 끊습니다.
+   ✗ この方法によって時間を大幅に短縮することができます
+   ○ このやり方だと時間めっちゃ縮まる
+
+4. **직역투 관용구**
+   ✗ 〜することができます → ○ 〜できる
+   ✗ とても/非常に → ○ めっちゃ / 超 / ヤバい
+   ✗ 〜してください → ○ 〜してみて / 〜してね
+   ✗ 私たちは〜 → ○ (주어 생략)
+   ✗ 〜だと思われます → ○ 〜っぽい / 〜らしい
+
+5. **한자어를 그대로 옮긴 부자연스러운 어휘**
+   한국 한자어와 일본 한자어는 쓰임이 다릅니다. 일본에서 실제로 쓰는 단어인지 확인하세요.
+   (예: '確認してください'보다 'チェックしてみて'가 쇼츠에서는 자연스럽습니다)
+
+6. **문어체 접속사** — そして / しかし / また 는 자막에서 어색합니다.
+   ○ でも / だけど / それに / つまり 처럼 구어 접속사를 쓰거나 아예 생략하세요.
+
+■ 실제 일본 쇼츠에서 쓰는 표현을 적극 활용할 것
+   〜すぎ / 〜すぎん？ / 〜じゃん / 〜だよね / 〜なんだけど / 〜しがち / 〜な件 /
+   ヤバい / マジで / それな / 知らんけど / 〜してみて / 〜だったりする
+
+■ 출력 직전 자가 점검
+   1. 자막·제목에 「あなた」「私たち」가 들어갔는가? → 빼세요. (설명문은 예외)
+   2. 자막·제목에 です・ます가 들어갔는가? → 반말로 바꾸세요. (설명문은 정중체가 맞음)
+   3. 이 문장을 일본인이 X(트위터)에 그대로 올려도 어색하지 않은가?
+   4. 한국어 원문의 어순을 그대로 따라가지 않았는가?
+   5. **위 예시 문장의 소재를 결과물에 끌어오지 않았는가?**
+      위 예시들은 말투를 보여주기 위한 것일 뿐입니다. 실제 작업은 반드시
+      주어진 대본·주제의 내용만 다루세요. 예시에 나온 소재를 섞으면 완전히 틀린 결과가 됩니다.`;
+
 const JSON_ONLY_RULE = `[출력 형식]
 결과는 지정된 JSON 스키마로만 출력합니다. 서론·후기·마크다운 코드펜스 없이 JSON 객체 하나만 반환하세요.`;
 
@@ -25,7 +85,10 @@ const SCRIPT_PROMPT = `[역할 및 페르소나]
 6. 끊어 읽기('/') 규칙: 각 행의 일본어 안에서도 자막을 나눌 수 있도록 호흡 단위마다 '/' 기호를 넣습니다.
 7. 마지막 10번째 컷에는 이탈을 막는 마무리(반전, 요약, 또는 가벼운 CTA)를 넣습니다. 과한 "チャンネル登録お願いします"는 피하고 자연스럽게 처리하세요.
 8. ko 필드에는 각 일본어 행의 한국어 해석을 넣어, 작업자가 내용을 검수할 수 있게 합니다.
-9. 주제가 주어지지 않았다면, 해당 카테고리에서 일본 시청자에게 지금 가장 잘 먹힐 만한 주제를 당신이 직접 하나 정해서 씁니다.
+9. [필수] **주제가 지정되어 있으면 반드시 그 주제로 씁니다.** 더 좋은 소재가 떠올라도 바꾸지 마세요.
+   지정된 주제가 "어느 선이 더 길어 보이는 착시"라면 선 길이 착시로 써야 하며, 색 착시나 다른 착시로 바꾸면 실패입니다.
+   topicKo에는 지정된 주제를 그대로 반영하고, 임의로 다른 주제를 만들어 넣지 마세요.
+10. 주제가 지정되지 않은 경우에만, 해당 카테고리에서 일본 시청자에게 잘 먹힐 만한 주제를 직접 하나 정해서 씁니다.
 
 ${LANG_SEPARATION_RULE}`;
 
@@ -65,7 +128,14 @@ export function buildScriptSystemPrompt(categoryId, extraInstructions = '') {
 
 export function buildScriptUserMessage({ topic, seconds }) {
   const lines = [];
-  lines.push(topic?.trim() ? `주제: ${topic.trim()}` : '주제: (지정 없음 — 카테고리에 맞춰 직접 정할 것)');
+
+  if (topic?.trim()) {
+    lines.push(`주제(고정): ${topic.trim()}`);
+    lines.push('※ 이 주제를 반드시 그대로 다룰 것. 다른 소재로 바꾸지 말 것.');
+  } else {
+    lines.push('주제: (지정 없음 — 카테고리에 맞춰 직접 정할 것)');
+  }
+
   lines.push(`총 길이: 약 ${seconds}초`);
   return lines.join('\n');
 }
@@ -172,84 +242,7 @@ export function buildImagePromptSystemPrompt(categoryId, characterSheet, extraIn
 
 [캐릭터 고정 묘사 — 모든 프롬프트 앞에 이 문장을 그대로 넣을 것]
 ${sheet}`;
-  return joinParts(withCharacter, categoryId, extraInstructions);
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// 모드 6: 사운드 — Suno용 BGM 프롬프트와 컷별 효과음 큐를 만든다.
-// ─────────────────────────────────────────────────────────────────────────
-
-const SOUND_PROMPT = `[역할]
-당신은 쇼츠 영상의 사운드 디자이너입니다. 주어진 대본에 맞는 배경음악(BGM) 프롬프트와 컷별 효과음 큐를 설계합니다. 인사말이나 서론 없이 즉시 작업합니다.
-
-[⚠️ 도구별 역할을 반드시 구분할 것]
-- **Suno는 음악 생성 AI입니다.** 곡(BGM)은 잘 만들지만 "쿵", "띠링" 같은 단발 효과음은 만들지 못합니다.
-- 따라서 bgm 항목만 Suno용 프롬프트로 씁니다.
-- 효과음(sfx)은 Suno로 만들라고 하지 말고, **편집 프로그램의 효과음 라이브러리에서 찾을 검색어**를 제시합니다.
-
-[BGM 프롬프트 규칙]
-1. 서로 다른 방향으로 2개를 제안합니다. (예: 하나는 긴장감 위주, 하나는 밝고 경쾌한 쪽)
-2. stylePrompt는 반드시 **영어**로 씁니다. Suno는 영어 스타일 지시에서 가장 정확합니다.
-3. stylePrompt에는 장르, 분위기, 주요 악기, 템포(BPM), 에너지 흐름을 담습니다.
-   가사는 넣지 않습니다. 반드시 instrumental임을 명시합니다.
-4. 쇼츠는 짧고 자막이 주인공입니다. 보컬이나 복잡한 멜로디로 주의를 뺏지 않도록 지시합니다.
-5. 대본의 흐름(훅 → 전개 → 정답 공개 → 마무리)에 음악의 긴장·해소가 맞물리게 설계합니다.
-
-[효과음 큐 규칙]
-1. 모든 컷에 효과음을 넣지 마세요. **정말 필요한 지점에만** 넣습니다. 과하면 싸구려로 들립니다.
-2. 각 큐에는 그 지점에 왜 필요한지(purposeKo)를 한 줄로 적습니다.
-3. searchEn에는 효과음 라이브러리에서 그대로 검색할 **영어 키워드**를 씁니다. (예: "whoosh transition", "ding correct answer")
-4. searchKo에는 캡컷 한국어 검색창에 넣을 키워드를 씁니다.
-
-${LANG_SEPARATION_RULE}`;
-
-export const SOUND_SCHEMA = {
-  type: 'object',
-  properties: {
-    bgm: {
-      type: 'array',
-      description: '서로 다른 방향의 BGM 제안 2개.',
-      items: {
-        type: 'object',
-        properties: {
-          angleKo: { type: 'string', description: '이 안의 방향성 (예: 긴장감형, 경쾌형).' },
-          stylePrompt: {
-            type: 'string',
-            description: 'Suno에 그대로 붙여넣을 영문 스타일 프롬프트. instrumental 명시 필수.',
-          },
-          bpm: { type: 'string', description: '권장 템포 (예: 100-110 BPM).' },
-          reasonKo: { type: 'string', description: '이 음악이 이 대본에 맞는 이유 한 줄 (한국어).' },
-        },
-        required: ['angleKo', 'stylePrompt', 'bpm', 'reasonKo'],
-        additionalProperties: false,
-      },
-    },
-    sfx: {
-      type: 'array',
-      description: '효과음이 정말 필요한 지점만. 모든 컷에 넣지 않는다.',
-      items: {
-        type: 'object',
-        properties: {
-          timeline: { type: 'string', description: '효과음이 들어갈 타임라인.' },
-          purposeKo: { type: 'string', description: '이 지점에 왜 필요한지 한 줄 (한국어).' },
-          searchKo: { type: 'string', description: '캡컷 한국어 검색 키워드.' },
-          searchEn: { type: 'string', description: '효과음 라이브러리 영어 검색 키워드.' },
-        },
-        required: ['timeline', 'purposeKo', 'searchKo', 'searchEn'],
-        additionalProperties: false,
-      },
-    },
-    noteKo: {
-      type: 'string',
-      description: '믹싱 관련 짧은 조언 (한국어). 예: BGM 볼륨을 자막 낭독 대비 몇 % 정도로 둘지 등.',
-    },
-  },
-  required: ['bgm', 'sfx', 'noteKo'],
-  additionalProperties: false,
-};
-
-export function buildSoundSystemPrompt(categoryId, extraInstructions = '') {
-  return joinParts(SOUND_PROMPT, categoryId, extraInstructions);
+  return joinParts(withCharacter, categoryId, extraInstructions, { includeHooks: false });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -333,7 +326,8 @@ export const DISCOVER_SCHEMA = {
 };
 
 export function buildDiscoverSystemPrompt(extraInstructions = '') {
-  const parts = [DISCOVER_PROMPT];
+  // 발굴 결과에도 일본어 훅·해시태그가 들어가므로 같은 규칙을 적용한다.
+  const parts = [DISCOVER_PROMPT, '', NATIVE_JA_RULE];
   if (extraInstructions.trim()) {
     parts.push('', `[이번 작업 추가 지시]\n${extraInstructions.trim()}`);
   }
@@ -433,7 +427,7 @@ export const TRANSLATE_SCHEMA = {
 };
 
 export function buildTranslateSystemPrompt(categoryId, extraInstructions = '') {
-  return joinParts(TRANSLATE_PROMPT, categoryId, extraInstructions);
+  return joinParts(TRANSLATE_PROMPT, categoryId, extraInstructions, { includeHooks: false });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -444,6 +438,10 @@ const METADATA_PROMPT = `# 역할 및 페르소나
 당신은 유튜브 영상 콘텐츠 전문 한-일 영상 번역 및 현지화(Localization) 전문가입니다. 사용자가 제공하는 영상의 시각적 내용, 오디오(음성), 또는 대본을 종합적으로 분석하여 일본 시청자에게 가장 매력적이고 알고리즘에 잘 노출되는 유튜브 메타데이터를 생성하는 것이 당신의 임무입니다.
 
 # 영상 분석 및 현지화 지침
+0. [최우선] **제목·설명·태그는 반드시 주어진 대본에 실제로 나오는 소재를 다뤄야 합니다.**
+   대본이 삼각형 착시라면 제목도 삼각형이어야 합니다. 카테고리 훅 예시나 이 프롬프트의
+   예문에 다른 소재가 있더라도 절대 끌어오지 마세요. 작업 시작 전에 대본을 읽고
+   "이 영상의 소재가 무엇인가"를 먼저 정한 뒤, 세 안 모두 그 소재로 만드세요.
 1. 제공된 영상 자료의 주제, 분위기, 핵심 대사, 자막 등을 정확히 파악하세요.
 2. 분석한 내용을 바탕으로 일본 현지 유튜브 트렌드, 검색 최적화(SEO), 신조어 및 자연스러운 구어체 표현을 반영하여 메타데이터를 작성하세요.
 3. 일본어와 한국어가 지정된 영역 외에서 절대 혼용되지 않도록 철저히 분리하여 작성하세요.
@@ -521,18 +519,24 @@ export const METADATA_SCHEMA = {
 };
 
 export function buildMetadataSystemPrompt(categoryId, extraInstructions = '') {
-  return joinParts(METADATA_PROMPT, categoryId, extraInstructions);
+  return joinParts(METADATA_PROMPT, categoryId, extraInstructions, { includeHooks: false });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 
-function joinParts(basePrompt, category, extraInstructions) {
+function joinParts(basePrompt, category, extraInstructions, { includeHooks = true } = {}) {
   // 커스텀 프리셋 객체면 그대로, 아니면 알려진 id로 정규화한다.
   const resolved =
     typeof category === 'object' && category
       ? category
       : (CATEGORIES[category] ? category : 'general');
-  const parts = [basePrompt, '', renderCategoryBlock(resolved)];
+  const parts = [
+    basePrompt,
+    '',
+    renderCategoryBlock(resolved, { includeHooks }),
+    '',
+    NATIVE_JA_RULE,
+  ];
 
   if (extraInstructions.trim()) {
     parts.push('', `[이번 작업 추가 지시]\n${extraInstructions.trim()}`);

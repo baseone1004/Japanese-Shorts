@@ -39,9 +39,11 @@ function getClient() {
 }
 
 export class LlmError extends Error {
-  constructor(status, message) {
+  /** @param retryable 같은 요청을 다시 보내면 해결될 수 있는 오류인지 (예: 응답이 깨진 JSON) */
+  constructor(status, message, retryable = false) {
     super(message);
     this.status = status;
+    this.retryable = retryable;
   }
 }
 
@@ -157,11 +159,15 @@ async function probeRealError() {
  * ("request ended without sending any chunks"). 재시도로 대부분 해결된다.
  */
 function isTransient(err) {
-  if (err instanceof LlmError) return false;
+  if (err instanceof LlmError) return err.retryable === true;
   if (err instanceof Anthropic.APIConnectionError) return true;
   if (err instanceof Anthropic.InternalServerError) return true;
   if (err instanceof Anthropic.APIError && err.status >= 500) return true;
-  return /without sending any chunks|socket hang up|ECONNRESET|ETIMEDOUT|aborted|terminated/i.test(
+
+  // KIE는 스트림 도중 오류를 SSE 이벤트로 흘려보낸다. 이때 SDK가 만드는 APIError는
+  // status가 undefined라 위 조건들을 모두 빠져나간다. 본문 내용으로 판별한다.
+  // 실측 예: {"type":"error","error":{"type":"api_error","message":"Internal error, please try again later"}}
+  return /without sending any chunks|socket hang up|ECONNRESET|ETIMEDOUT|aborted|terminated|api_error|internal error|overloaded|try again later/i.test(
     err?.message ?? '',
   );
 }
@@ -177,8 +183,9 @@ export async function callClaude({ system, userMessage, schema, validate }) {
       out = await callOnce({ system, userMessage, schema });
     } catch (err) {
       if (!isTransient(err) || attempt === ATTEMPTS) {
-        // 마지막 시도까지 실패했다면 KIE에 진짜 사유를 물어본다.
-        if (USING_KIE && isTransient(err)) {
+        // 통신 자체가 실패한 경우에만 KIE에 진짜 사유를 물어본다.
+        // (응답은 받았는데 JSON이 깨진 경우는 한도 문제가 아니므로 제외)
+        if (USING_KIE && !(err instanceof LlmError) && isTransient(err)) {
           const reason = await probeRealError();
           if (reason) throw new LlmError(429, reason);
         }
@@ -266,7 +273,12 @@ function finish(message, mode) {
     result = parseJson(extractText(message));
   } catch (err) {
     if (err instanceof LlmError) throw err;
-    throw new LlmError(502, '모델 응답을 JSON으로 해석하지 못했습니다.');
+    // 깨진 JSON은 다시 요청하면 대개 정상적으로 온다.
+    // 원인 추적이 어려웠던 적이 있어 앞부분만 남긴다. 모델이 JSON 대신 사유를
+    // 설명하는 경우(예: 입력이 깨져서 읽을 수 없다)가 여기서 바로 드러난다.
+    const raw = message.content.find((b) => b.type === 'text')?.text ?? '';
+    console.warn(`[llm] JSON 파싱 실패: ${JSON.stringify(raw.slice(0, 120))}`);
+    throw new LlmError(502, '모델 응답을 JSON으로 해석하지 못했습니다.', true);
   }
 
   return {

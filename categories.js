@@ -19,8 +19,10 @@ export const CATEGORIES = {
 
   illusion: {
     label: '착시 / 트릭 (錯覚トリック)',
+    // tone에는 특정 소재를 암시하는 예문을 넣지 않는다. 모델이 그 소재를 그대로
+    // 끌어와 실제 대본과 무관한 결과를 내는 일이 있었다.
     tone:
-      '시청자에게 직접 말을 거는 참여형 반말. 한 문장을 최대한 짧게 끊고, 「見える？」「どっちが長い？」처럼 질문형으로 끌어당긴다. 정답을 미리 흘리지 말고 마지막에 공개한다.',
+      '시청자에게 직접 말을 거는 참여형 반말. 한 문장을 최대한 짧게 끊고, 그 영상의 소재에 맞는 질문형으로 끌어당긴다. 정답을 미리 흘리지 말고 마지막에 공개한다.',
     hooks: [
       '99%が間違える',
       'どっちが長い？',
@@ -143,16 +145,29 @@ export const CATEGORY_LIST = Object.entries(CATEGORIES).map(([id, c]) => ({
  * 카테고리 프리셋을 시스템 프롬프트에 붙일 텍스트 블록으로 렌더링한다.
  * @param category  기본 카테고리 id 문자열, 또는 발굴 기능이 만든 커스텀 프리셋 객체.
  */
-export function renderCategoryBlock(category) {
+/**
+ * @param opts.includeHooks  훅 예시를 넣을지.
+ *   주제·대본을 새로 창작하는 모드에서는 유용하지만, 이미 있는 대본에서 내용을
+ *   끌어와야 하는 모드(번역·메타데이터·이미지·사운드)에서는 모델이 훅 문구의
+ *   소재를 그대로 베껴 대본과 무관한 결과를 내는 일이 실제로 발생해 제외한다.
+ */
+export function renderCategoryBlock(category, { includeHooks = true } = {}) {
   const c =
     typeof category === 'object' && category
       ? category
       : (CATEGORIES[category] ?? CATEGORIES.general);
-  return [
-    `[카테고리 튜닝: ${c.label}]`,
-    `- 문체/톤: ${c.tone}`,
-    `- 이 장르에서 자주 먹히는 훅 표현(참고용, 그대로 베끼지 말고 대본에 맞게 변형): ${c.hooks.join(' / ')}`,
-    `- 해시태그 후보: ${c.tags.join(' ')}`,
-    `- 주의사항: ${c.notes}`,
-  ].join('\n');
+  const lines = [`[카테고리 튜닝: ${c.label}]`, `- 문체/톤: ${c.tone}`];
+
+  if (includeHooks) {
+    lines.push(
+      '',
+      `- 훅 표현 예시: ${c.hooks.join(' / ')}`,
+      '  ⚠️ 위 훅은 **말투와 리듬만 참고하라고 보여주는 견본**입니다.',
+      '  문구를 그대로 복사하지 말고, 실제 소재에 맞는 새 문장을 쓰세요.',
+      '',
+    );
+  }
+
+  lines.push(`- 해시태그 후보: ${c.tags.join(' ')}`, `- 주의사항: ${c.notes}`);
+  return lines.join('\n');
 }

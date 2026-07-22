@@ -53,9 +53,6 @@
         <button class="tab" data-tab="imgp">
           <span class="num">STEP 04</span>이미지 프롬프트
         </button>
-        <button class="tab" data-tab="snd">
-          <span class="num">STEP 05</span>사운드
-        </button>
         <button class="tab" data-tab="disc">
           <span class="num">＋</span>카테고리 발굴
         </button>
@@ -251,62 +248,6 @@
         </div>
       </section>
 
-      <!-- ⑤ 사운드 -->
-      <section class="panel tabpane" data-pane="snd" hidden>
-        <p class="pane-desc">
-          대본에 맞는 <strong>BGM 프롬프트</strong>와 <strong>컷별 효과음 큐</strong>를 만듭니다.
-        </p>
-
-        <div class="warnbox">
-          🎵 <strong>Suno는 음악 생성 AI라 단발 효과음은 못 만듭니다.</strong>
-          BGM 프롬프트만 Suno에 붙여넣어 쓰시고, 효과음은 아래 검색어로
-          캡컷 내장 효과음 라이브러리에서 찾으시면 됩니다.
-        </div>
-
-        <div class="field">
-          <label for="scriptSnd">대본</label>
-          <textarea
-            id="scriptSnd"
-            rows="10"
-            placeholder="① 탭에서 만든 대본을 가져오거나 직접 붙여넣으세요."
-          ></textarea>
-        </div>
-
-        <div class="btn-row">
-          <button id="runSnd" class="primary">사운드 설계</button>
-          <button id="sndFromScript" class="ghost">① 대본 가져오기</button>
-        </div>
-        <p class="status" id="statusSnd"></p>
-
-        <div class="results" id="resSnd" hidden>
-          <div class="block">
-            <h2>BGM 프롬프트 <span class="badge">Suno</span></h2>
-            <div id="bgmList" class="ideas"></div>
-          </div>
-
-          <div class="block">
-            <div class="block-head">
-              <h2>효과음 큐 <span class="badge">캡컷</span></h2>
-              <div class="actions">
-                <button data-copy="snd">엑셀용 복사</button>
-                <button data-csv="snd">CSV</button>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>타임라인</th><th>용도</th><th>검색어 (한국어)</th><th>검색어 (영어)</th></tr>
-                </thead>
-                <tbody id="sfxBody"></tbody>
-              </table>
-            </div>
-            <h3>믹싱 메모</h3>
-            <p class="note" id="sndNote"></p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ＋ 카테고리 발굴 -->
       <section class="panel tabpane" data-pane="disc" hidden>
         <p class="pane-desc">
           지금 쓰는 13개 말고 <strong>새로 파볼 만한 장르</strong>를 제안받습니다. 마음에 들면
