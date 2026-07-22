@@ -89,8 +89,25 @@
 
 끝낼 때는 **`stop.vbs`** 를 더블클릭하세요. 앱 창만 닫으면 서버는 계속 떠 있습니다.
 
-> 바탕화면에 두고 쓰려면 두 파일의 **바로 가기**를 만들어 옮기세요.
-> 파일 자체를 옮기면 안 됩니다 (같은 폴더에 있어야 동작합니다).
+### 바탕화면 바로 가기
+
+바탕화면에 **`일본 쇼츠 스튜디오`**(실행)와 **`일본 쇼츠 종료`** 바로 가기가 놓여 있습니다.
+바탕화면에서 바로 더블클릭하면 됩니다.
+
+바로 가기가 사라졌거나 다시 만들려면 PowerShell에서:
+
+```powershell
+$d = [Environment]::GetFolderPath('Desktop'); $p = 'C:\projects\Japanese-Shorts'
+$sh = New-Object -ComObject WScript.Shell
+$s = $sh.CreateShortcut("$d\일본 쇼츠 스튜디오.lnk")
+$s.TargetPath = "$p\start.vbs"; $s.WorkingDirectory = $p; $s.IconLocation = "$p\icon.ico,0"; $s.Save()
+$s = $sh.CreateShortcut("$d\일본 쇼츠 종료.lnk")
+$s.TargetPath = "$p\stop.vbs"; $s.WorkingDirectory = $p
+$s.IconLocation = "$env:SystemRoot\System32\shell32.dll,131"; $s.Save()
+```
+
+> 프로그램 파일(`start.vbs` 등) 자체를 바탕화면으로 **옮기면 안 됩니다.**
+> 같은 폴더에 있어야 동작합니다. 바로 가기만 옮기세요.
 
 처음 한 번은 `.env` 파일에 API 키를 넣어야 합니다 (아래 설치 항목 참고).
 
