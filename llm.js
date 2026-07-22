@@ -218,6 +218,17 @@ async function callOnce({ system, userMessage, schema }) {
     messages: [{ role: 'user', content: userMessage }],
   };
 
+  // KIE 프록시는 output_config(구조화 출력)를 제대로 중계하지 못한다. 요청은 200으로
+  // 받으면서 응답을 100~150 토큰에서 잘라 돌려준다 (rows가 0~1개, 필수 필드 누락).
+  // 같은 프롬프트를 스키마만 본문에 넣어 보내면 정상 동작한다.
+  // 측정: 구조화 출력 1/4 성공, JSON 프롬프트 4/4 성공.
+  if (USING_KIE) {
+    const message = await anthropic.messages
+      .stream({ ...base, system: withSchemaInPrompt(system, schema) })
+      .finalMessage();
+    return finish(message, 'json-prompt');
+  }
+
   let message;
   let mode = 'structured';
 
@@ -241,6 +252,11 @@ async function callOnce({ system, userMessage, schema }) {
       .finalMessage();
   }
 
+  return finish(message, mode);
+}
+
+/** 응답 메시지를 공통 형태로 정리한다. */
+function finish(message, mode) {
   if (message.stop_reason === 'refusal') {
     throw new LlmError(422, '모델이 이 요청의 처리를 거부했습니다.');
   }

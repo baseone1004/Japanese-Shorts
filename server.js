@@ -150,7 +150,9 @@ app.post('/api/script', async (req, res) => {
       system: buildScriptSystemPrompt(category, extraInstructions),
       userMessage: buildScriptUserMessage({ topic, seconds: dur }),
       schema: SCRIPT_SCHEMA,
-      validate: (r) => allFilled(r?.rows, ['timeline', 'ja', 'ko'], 10),
+      validate: (r) =>
+        allFilled(r?.rows, ['timeline', 'ja', 'ko'], 10) &&
+        ['topicKo', 'topicJa', 'hookJa', 'productionNoteKo'].every((k) => r?.[k]?.trim()),
     });
 
     res.json({ category: req.body?.category ?? "general", categoryLabel: labelOf(category), ...out });
