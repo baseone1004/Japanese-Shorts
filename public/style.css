@@ -700,6 +700,53 @@ td.prompt-cell {
   font-size: 0.8rem;
 }
 
+/* 자동화 진행 로그 — 몇 분 걸리는 작업이라 단계가 보여야 안심된다 */
+.autolog {
+  margin-top: 0.9rem;
+  padding: 0.8rem 1rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.8;
+}
+
+.autolog-line {
+  color: var(--text-2);
+}
+
+.autolog-line::before {
+  content: '▸ ';
+  color: var(--accent);
+}
+
+.autolog-line:last-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.filelist,
+.steps {
+  margin: 0.4rem 0 0;
+  padding-left: 1.3rem;
+  font-size: 0.87rem;
+  line-height: 1.9;
+  color: var(--text-2);
+}
+
+.filelist code,
+.steps code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: var(--panel-3);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  color: var(--text);
+}
+
 /* Suno에 그대로 붙여넣는 프롬프트 — 복사하기 좋게 눈에 띄게 */
 .prompt-box {
   font-family: var(--font-mono);

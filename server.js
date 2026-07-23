@@ -20,6 +20,8 @@ import {
   DISCOVER_SCHEMA,
 } from './prompt.js';
 import { callClaude, assertConfigured, providerInfo, USING_KIE, MODEL } from './llm.js';
+import { listVoices, USING_TTS } from './tts.js';
+import { buildVideoPackage, DAILY_LIMIT, OUTPUT_ROOT } from './pipeline.js';
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -233,6 +235,77 @@ app.post('/api/imageprompts', async (req, res) => {
 /** 화면에서 캐릭터 묘사 기본값을 채워 넣기 위한 엔드포인트. */
 app.get('/api/character-sheet', (_req, res) => {
   res.json({ characterSheet: DEFAULT_CHARACTER_SHEET });
+});
+
+// ── 자동화: 소재 하나로 캡컷 파일 한 세트 만들기 ─────────────────────────
+
+app.get('/api/auto/status', async (_req, res) => {
+  let voices = [];
+  let voiceError = null;
+
+  if (USING_TTS) {
+    try {
+      voices = await listVoices();
+    } catch (err) {
+      voiceError = err.message;
+    }
+  }
+
+  res.json({
+    hasTts: USING_TTS,
+    voices,
+    voiceError,
+    outputRoot: OUTPUT_ROOT,
+    dailyLimit: DAILY_LIMIT,
+  });
+});
+
+/**
+ * 진행 상황을 줄 단위 JSON으로 흘려보낸다.
+ * 전체 과정이 3~5분 걸려서, 응답을 다 만들 때까지 기다리면 멈춘 것처럼 보인다.
+ */
+app.post('/api/auto', async (req, res) => {
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+
+  const send = (obj) => res.write(JSON.stringify(obj) + '\n');
+
+  try {
+    const category = validate(req);
+    requireApiKey();
+
+    const {
+      topic = '',
+      seconds = 30,
+      extraInstructions = '',
+      voiceId = '',
+      emotion = 'normal',
+      characterSheet = '',
+    } = req.body ?? {};
+
+    const dur = Number(seconds);
+    if (!Number.isFinite(dur) || dur < 10 || dur > 180) {
+      throw new HttpError(400, '길이는 10~180초 사이여야 합니다.');
+    }
+
+    const result = await buildVideoPackage({
+      category,
+      topic,
+      seconds: dur,
+      extraInstructions,
+      voiceId,
+      emotion,
+      characterSheet,
+      onProgress: (msg) => send({ type: 'progress', message: msg }),
+    });
+
+    send({ type: 'done', result });
+  } catch (err) {
+    console.error(err);
+    send({ type: 'error', message: err?.message ?? String(err) });
+  } finally {
+    res.end();
+  }
 });
 
 // ── 모드 5: 카테고리 발굴 ────────────────────────────────────────────────

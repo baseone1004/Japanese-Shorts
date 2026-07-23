@@ -53,6 +53,9 @@
         <button class="tab" data-tab="imgp">
           <span class="num">STEP 04</span>이미지 프롬프트
         </button>
+        <button class="tab" data-tab="auto">
+          <span class="num">⚡ AUTO</span>한번에 만들기
+        </button>
         <button class="tab" data-tab="disc">
           <span class="num">＋</span>카테고리 발굴
         </button>
@@ -244,6 +247,71 @@
                 <tbody id="imgpBody"></tbody>
               </table>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⚡ 한번에 만들기 -->
+      <section class="panel tabpane" data-pane="auto" hidden>
+        <p class="pane-desc">
+          주제 하나로 <strong>대본 · 음성 · 자막 · 메타데이터 · 이미지 프롬프트</strong>를 한 번에
+          만들어 폴더에 저장합니다. 캡컷에서 드래그 두 번이면 됩니다.
+        </p>
+
+        <div id="autoStatus" class="statusbar"></div>
+
+        <div class="row">
+          <div class="field grow">
+            <label for="autoTopic">주제 (비워도 됨)</label>
+            <input id="autoTopic" type="text" placeholder="비우면 카테고리에 맞춰 AI가 정합니다" />
+          </div>
+          <div class="field">
+            <label for="autoSeconds">길이(초)</label>
+            <input id="autoSeconds" type="number" value="30" min="10" max="180" step="5" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field grow">
+            <label for="autoVoice">목소리 (타입캐스트)</label>
+            <select id="autoVoice"></select>
+          </div>
+          <div class="field">
+            <label for="autoEmotion">감정</label>
+            <select id="autoEmotion">
+              <option value="normal">기본</option>
+              <option value="happy">밝게</option>
+              <option value="sad">차분히</option>
+              <option value="angry">강하게</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint">
+          타입캐스트에 언어 필터가 없어 전체 목록이 나옵니다. 일본어에 어울리는 목소리를 한 번
+          골라두면 다음에도 유지됩니다.
+        </p>
+
+        <div class="btn-row">
+          <button id="runAuto" class="primary">⚡ 한번에 만들기</button>
+        </div>
+        <p class="status" id="statusAuto"></p>
+
+        <div id="autoLog" class="autolog" hidden></div>
+
+        <div class="results" id="resAuto" hidden>
+          <div class="block">
+            <h2>완성 <span class="badge" id="autoBadge"></span></h2>
+            <p class="note" id="autoFolder"></p>
+            <h3>만들어진 파일</h3>
+            <ul id="autoFiles" class="filelist"></ul>
+            <h3>캡컷에서 할 일</h3>
+            <ol class="steps">
+              <li>캡컷 새 프로젝트 (9:16 세로)</li>
+              <li><code>voice.wav</code> 를 타임라인에 끌어다 놓기</li>
+              <li><code>자막.srt</code> 를 끌어다 놓기 — 자막이 통째로 들어갑니다</li>
+              <li>이미지 프롬프트로 그림을 만들어 컷 순서대로 배치</li>
+              <li>BGM 깔고 볼륨 20~30%</li>
+            </ol>
           </div>
         </div>
       </section>

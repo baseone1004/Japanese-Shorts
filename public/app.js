@@ -347,6 +347,139 @@ $('runImgp').addEventListener('click', async () => {
   }
 });
 
+// ─── ⚡ 한번에 만들기 ────────────────────────────────────────────────────
+
+const VOICE_KEY = 'js:voiceId';
+
+async function loadAutoStatus() {
+  try {
+    const s = await (await fetch('/api/auto/status')).json();
+    const bar = $('autoStatus');
+    const sel = $('autoVoice');
+
+    if (!s.hasTts) {
+      bar.className = 'statusbar warn';
+      bar.textContent =
+        '⚠ TYPECAST_API_KEY가 없어 음성 없이 만들어집니다. .env에 키를 넣으면 음성과 정확한 자막이 함께 생성됩니다.';
+      sel.innerHTML = '<option value="">(키 없음)</option>';
+      return;
+    }
+
+    if (s.voiceError) {
+      bar.className = 'statusbar warn';
+      bar.textContent = `⚠ 목소리 목록을 못 불러왔습니다: ${s.voiceError}`;
+      sel.innerHTML = '<option value="">(불러오기 실패)</option>';
+      return;
+    }
+
+    bar.className = 'statusbar ok';
+    bar.textContent = `✓ 저장 위치: ${s.outputRoot} · 하루 최대 ${s.dailyLimit}편`;
+
+    sel.innerHTML = s.voices
+      .map((v) => `<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.gender ?? '')})</option>`)
+      .join('');
+
+    const saved = localStorage.getItem(VOICE_KEY);
+    if (saved && s.voices.some((v) => v.id === saved)) sel.value = saved;
+  } catch {
+    /* 상태 표시는 부가 기능이라 실패해도 앱은 그대로 쓴다 */
+  }
+}
+
+$('autoVoice').addEventListener('change', () =>
+  localStorage.setItem(VOICE_KEY, $('autoVoice').value),
+);
+
+$('runAuto').addEventListener('click', async () => {
+  const btn = $('runAuto');
+  const status = $('statusAuto');
+  const log = $('autoLog');
+
+  btn.disabled = true;
+  log.hidden = false;
+  log.innerHTML = '';
+  $('resAuto').hidden = true;
+  setStatus(status, '시작하는 중…', 'pending');
+
+  const started = Date.now();
+  const tick = setInterval(() => {
+    const s = Math.floor((Date.now() - started) / 1000);
+    setStatus(status, `진행 중… ${Math.floor(s / 60)}분 ${s % 60}초 경과`, 'pending');
+  }, 1000);
+
+  const addLine = (msg) => {
+    const el = document.createElement('div');
+    el.className = 'autolog-line';
+    el.textContent = msg;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  try {
+    const res = await fetch('/api/auto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: $('category').value,
+        customCategory: customCategories[$('category').value],
+        extraInstructions: $('extra').value,
+        topic: $('autoTopic').value,
+        seconds: Number($('autoSeconds').value),
+        voiceId: $('autoVoice').value,
+        emotion: $('autoEmotion').value,
+        characterSheet: $('characterSheet').value,
+      }),
+    });
+
+    // 진행 상황이 줄 단위 JSON으로 흘러온다.
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let done = null;
+    let failed = null;
+
+    for (;;) {
+      const { value, done: finished } = await reader.read();
+      if (finished) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const ev = JSON.parse(line);
+        if (ev.type === 'progress') addLine(ev.message);
+        else if (ev.type === 'done') done = ev.result;
+        else if (ev.type === 'error') failed = ev.message;
+      }
+    }
+
+    clearInterval(tick);
+
+    if (failed) throw new Error(failed);
+    if (!done) throw new Error('결과를 받지 못했습니다.');
+
+    renderAuto(done);
+    const secs = Math.round((Date.now() - started) / 1000);
+    setStatus(status, `완료 · ${secs}초 소요 · 오늘 ${done.remainingToday}편 더 만들 수 있습니다.`);
+  } catch (err) {
+    clearInterval(tick);
+    setStatus(status, err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function renderAuto(r) {
+  $('autoBadge').textContent = r.durationSec ? `${r.durationSec.toFixed(1)}초` : '음성 없음';
+  $('autoFolder').textContent = r.folder;
+  $('autoFiles').innerHTML = r.files.map((f) => `<li><code>${esc(f)}</code></li>`).join('');
+  $('resAuto').hidden = false;
+}
+
+// ─── ＋ 카테고리 발굴 ────────────────────────────────────────────────────
+
 const EFFORT = { easy: '쉬움', normal: '보통', hard: '어려움' };
 const CONF = { high: '근거 탄탄', medium: '보통', low: '추측성' };
 
@@ -477,4 +610,5 @@ function flash(btn, text) {
 
 loadCategories();
 loadCharacterSheet();
+loadAutoStatus();
 showTab(localStorage.getItem('js:tab') ?? 'gen');
