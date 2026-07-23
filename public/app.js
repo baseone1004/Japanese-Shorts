@@ -350,6 +350,42 @@ $('runImgp').addEventListener('click', async () => {
 // ─── ⚡ 한번에 만들기 ────────────────────────────────────────────────────
 
 const VOICE_KEY = 'js:voiceId';
+const JP_ONLY_KEY = 'js:voiceJpOnly';
+
+/**
+ * 타입캐스트 목소리 목록에는 언어 정보가 없어 이름으로 일본어권을 추린다.
+ *
+ * 성(姓)은 길고 고유해서 그대로 찾아도 되지만, 이름은 짧아서 부분 일치를 허용하면
+ * Lorenzo(ren), Catherine(rin) 같은 오탐이 생긴다. 단어 경계를 요구한다.
+ */
+const JP_SURNAME =
+  /tanaka|sato|satou|suzuki|ishida|yamada|nakamura|kobayashi|takahashi|watanabe|ito|itou|yamamoto|kato|matsumoto|inoue|kimura|hayashi|shimizu|saito/i;
+const JP_GIVEN =
+  /\b(yuki|sakura|haruna|haruto|haru|akira|aki|hana|hinata|sora|rin|ren|yui|mei|nao|riku|kenji|takumi|hiroshi|hiro|ayumi|kaori|misaki|miu|yuna|yuma|kaito|daiki|shota|ayaka|momoka|tsubasa)\b/i;
+const JP_TAG = /\b(jp|ja|japan|japanese|nihon)\b/i;
+
+const isJapaneseVoice = (name) =>
+  JP_SURNAME.test(name) || JP_GIVEN.test(name) || JP_TAG.test(name);
+
+let allVoices = [];
+
+function renderVoices() {
+  const sel = $('autoVoice');
+  const jpOnly = $('jpOnly').checked;
+  const list = jpOnly ? allVoices.filter((v) => isJapaneseVoice(v.name)) : allVoices;
+
+  // 걸러낸 결과가 없으면 전체를 보여준다. 빈 목록보다는 낫다.
+  const shown = list.length ? list : allVoices;
+
+  sel.innerHTML = shown
+    .map((v) => `<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.gender ?? '')})</option>`)
+    .join('');
+
+  const saved = localStorage.getItem(VOICE_KEY);
+  if (saved && shown.some((v) => v.id === saved)) sel.value = saved;
+
+  $('voiceHint').dataset.count = `${shown.length}개 / 전체 ${allVoices.length}개`;
+}
 
 async function loadAutoStatus() {
   try {
@@ -375,16 +411,18 @@ async function loadAutoStatus() {
     bar.className = 'statusbar ok';
     bar.textContent = `✓ 저장 위치: ${s.outputRoot} · 하루 최대 ${s.dailyLimit}편`;
 
-    sel.innerHTML = s.voices
-      .map((v) => `<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.gender ?? '')})</option>`)
-      .join('');
-
-    const saved = localStorage.getItem(VOICE_KEY);
-    if (saved && s.voices.some((v) => v.id === saved)) sel.value = saved;
+    allVoices = s.voices;
+    $('jpOnly').checked = localStorage.getItem(JP_ONLY_KEY) !== 'false';
+    renderVoices();
   } catch {
     /* 상태 표시는 부가 기능이라 실패해도 앱은 그대로 쓴다 */
   }
 }
+
+$('jpOnly').addEventListener('change', () => {
+  localStorage.setItem(JP_ONLY_KEY, String($('jpOnly').checked));
+  renderVoices();
+});
 
 $('autoVoice').addEventListener('change', () =>
   localStorage.setItem(VOICE_KEY, $('autoVoice').value),

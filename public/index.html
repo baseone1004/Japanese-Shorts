@@ -277,6 +277,12 @@
             <select id="autoVoice"></select>
           </div>
           <div class="field">
+            <label class="check">
+              <input id="jpOnly" type="checkbox" checked />
+              일본어 이름만
+            </label>
+          </div>
+          <div class="field">
             <label for="autoEmotion">감정</label>
             <select id="autoEmotion">
               <option value="normal">기본</option>
@@ -286,9 +292,12 @@
             </select>
           </div>
         </div>
-        <p class="hint">
-          타입캐스트에 언어 필터가 없어 전체 목록이 나옵니다. 일본어에 어울리는 목소리를 한 번
-          골라두면 다음에도 유지됩니다.
+        <p class="hint" id="voiceHint">
+          타입캐스트에 언어 필터가 없어 이름으로 걸러냅니다. 체크를 풀면 전체 목록이 나옵니다.
+          한 번 고르면 다음에도 유지됩니다.
+          <a href="https://studio.typecast.ai/developers/api/voices" target="_blank" rel="noopener">
+            미리 들어보기 →
+          </a>
         </p>
 
         <div class="btn-row">

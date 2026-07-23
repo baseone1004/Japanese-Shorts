@@ -132,7 +132,10 @@ function srtTime(sec) {
 
 /**
  * 대본의 '/' 단위로 자막을 쪼갠다.
- * 조각의 길이 비율로 시간을 나눠, 한 컷 안에서도 자막이 순서대로 바뀐다.
+ *
+ * 타입캐스트가 돌려준 글자 단위 타이밍을 그대로 쓴다. 글자수 비례로 나누면
+ * 말이 빠른 구간과 느린 구간이 어긋나고, 앞뒤 무음까지 자막에 포함된다.
+ * 실제 타이밍을 쓰면 소리가 나는 순간에 자막이 뜬다.
  */
 export function buildSrt({ clips, rows }) {
   const entries = [];
@@ -140,18 +143,19 @@ export function buildSrt({ clips, rows }) {
   clips.forEach((clip, i) => {
     const ja = rows[i]?.ja ?? clip.text;
     const parts = ja.split('/').map((s) => s.trim()).filter(Boolean);
+    if (!parts.length) return;
 
-    if (parts.length <= 1) {
-      entries.push({ start: clip.start, end: clip.end, text: parts[0] ?? clip.text });
+    const timed = sliceByCharTiming(clip, parts);
+    if (timed) {
+      entries.push(...timed);
       return;
     }
 
+    // 글자 타이밍을 못 받았을 때만 길이 비례로 나눈다.
     const totalChars = parts.reduce((n, p) => n + p.length, 0);
     let t = clip.start;
-
     parts.forEach((part, n) => {
-      const share = (part.length / totalChars) * clip.duration;
-      const end = n === parts.length - 1 ? clip.end : t + share;
+      const end = n === parts.length - 1 ? clip.end : t + (part.length / totalChars) * clip.duration;
       entries.push({ start: t, end, text: part });
       t = end;
     });
@@ -160,6 +164,46 @@ export function buildSrt({ clips, rows }) {
   return entries
     .map((e, i) => `${i + 1}\n${srtTime(e.start)} --> ${srtTime(e.end)}\n${e.text}\n`)
     .join('\n');
+}
+
+/**
+ * 글자 타이밍 배열을 걸어가며 각 조각이 실제로 발음되는 구간을 찾는다.
+ * 읽은 텍스트는 '/'가 공백으로 바뀐 형태라, 조각의 글자를 순서대로 대조하면
+ * 어느 타이밍 항목까지가 그 조각인지 알 수 있다.
+ */
+function sliceByCharTiming(clip, parts) {
+  const chars = clip.characters;
+  if (!Array.isArray(chars) || !chars.length) return null;
+
+  const out = [];
+  let idx = 0;
+
+  for (const part of parts) {
+    // 조각 시작 전의 공백은 건너뛴다.
+    while (idx < chars.length && !chars[idx].text.trim()) idx++;
+    if (idx >= chars.length) return null;
+
+    const startIdx = idx;
+    let matched = 0;
+    const target = part.replace(/\s/g, '');
+
+    while (idx < chars.length && matched < target.length) {
+      const t = chars[idx].text;
+      if (t.trim()) matched += t.length;
+      idx++;
+    }
+
+    // 대조가 어긋나면 신뢰할 수 없으므로 비례 분할로 넘긴다.
+    if (matched < target.length) return null;
+
+    out.push({
+      start: clip.start + chars[startIdx].start,
+      end: clip.start + chars[idx - 1].end,
+      text: part,
+    });
+  }
+
+  return out;
 }
 
 export { TtsError };
