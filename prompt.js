@@ -198,19 +198,25 @@ export function buildTopicsSystemPrompt(categoryId, extraInstructions = '') {
 
 /**
  * 채널 고정 캐릭터의 기본 묘사. 화면에서 수정할 수 있고 localStorage에 저장된다.
- * 세 캐릭터(소녀·포메라니안·토끼)와 화풍·배경까지 명시해야 컷마다 흔들리지 않는다.
+ * 캐릭터·화풍·배경을 모두 명시해야 컷마다 그림이 흔들리지 않는다.
  */
-export const DEFAULT_CHARACTER_SHEET = `CHANNEL MASCOTS — always draw these three characters exactly as described, every time:
+export const DEFAULT_CHARACTER_SHEET = `CHANNEL MASCOT — one girl. Draw her exactly as described, identically in every cut:
 
-(1) GIRL — very cute chibi anime style with an oversized head on a small rounded body (about 1:2.5 head-to-body ratio). LONG STRAIGHT HAIR in soft chestnut brown, falling well past her shoulders down to her waist, perfectly smooth and silky with a glossy highlight band across the crown, straight blunt bangs above her eyebrows, and two soft strands framing her face. The hair ends are straight and neat, never curled or wavy. Big sparkling round eyes with large glossy highlights and long lashes, or sometimes closed in happy upward arcs (^_^) when she smiles wide. Tiny rounded nose, small soft smile or open joyful grin. Two large soft-pink oval blush marks, one on each cheek. Wears a blue-and-white horizontal striped short-sleeve tee under blue denim overalls with round orange-yellow buttons on the straps, a front pocket and visible stitching. Holds up a slim black magic wand topped with a chunky golden-yellow five-pointed star. Small plump hands, gentle and endearing posture.
+HAIR — medium-length wavy chestnut-brown hair worn in TWO HIGH BUNS (space buns), one on each side of the top of her head. Soft loose wavy strands escape from the buns and frame her face, with wispy side-swept bangs across her forehead. The waves are gentle and bouncy, never straight or stiff.
 
-(2) DOG — fluffy Pomeranian with ginger-orange fur and a cream-white chest, muzzle and paws. Wears round thin-rimmed eyeglasses and a small black top hat with a red band, tilted slightly. Big round glossy black eyes with white highlights, open smiling mouth with a small pink tongue. Stands beside the girl on her right.
+HAIR ACCESSORIES — a pink ribbon bow on her right bun, a pink five-pointed star clip and small pink bobby-pin clips on the left side of her bangs.
 
-(3) RABBIT — small white rabbit with pink inner ears, popping up out of a black magician's top hat. The hat has a bright red inner lining and a small red ribbon on its side.
+FACE — large round brown eyes with big glossy white highlights and defined dark lashes. Thin brown eyebrows. Wide open cheerful smile showing a little of her upper teeth. Small soft-pink blush strokes on both cheeks. Tiny simple nose. Dangling pink star earrings.
 
-ART STYLE — soft pastel anime illustration, maximum kawaii. Gentle muted pastel palette (powder blue, soft peach, pale mint, light lavender, cream). Thin delicate line art in a soft warm brown rather than harsh black. Smooth airbrushed shading with gentle gradients, soft rim light, dreamy and cozy atmosphere. Slightly desaturated and low-contrast — nothing harsh or neon. Storybook picture-book quality. Everything rounded and soft: no sharp corners, plump proportions, tiny hands and feet. Add small kawaii touches — sparkles, tiny hearts, soft glow around the characters.
+OUTFIT — an oversized hoodie in thick horizontal PINK AND WHITE stripes, with white drawstrings, a kangaroo front pocket, and a small white bunny-face graphic on the chest. Navy pleated mini skirt. White thigh-high socks with pink stripes at the top band. Chunky pink-and-white sneakers with white laces.
 
-BACKGROUND — soft pastel gradient (pale sky-blue drifting into cream), with gentle bokeh circles, small white four-point sparkles and a few floating pastel dots. Keep the background simple and airy so the characters stay readable.`;
+PROPS — she holds up a smartphone in a pink case with a beaded strap and a small pink bunny charm dangling from it. A soft yellow tote bag hangs from her shoulder, decorated with cute cat, donut and star stickers. Her other hand is raised in a friendly open-palm wave. A pink beaded bracelet on her wrist.
+
+PROPORTIONS — cute anime style with slightly large head and big eyes, but normal body proportions (not chibi). Slim build, natural standing or upper-body pose.
+
+ART STYLE — soft pastel anime illustration, maximum kawaii. Clean confident line art in warm dark brown rather than harsh black. Flat-to-soft cel shading with gentle gradients, no heavy rendering or realistic texture. Pastel palette led by pink, cream and white, with navy and soft yellow as accents. Bright, clean and cheerful. Storybook illustration quality.
+
+BACKGROUND — flat soft lavender or pale pastel backdrop with a gentle vignette. Keep it simple and uncluttered so the character stays the focus. Optionally a few small white sparkles.`;
 
 const IMAGE_PROMPT_PROMPT = `[역할]
 당신은 유튜브 쇼츠용 이미지 생성 프롬프트를 쓰는 아트 디렉터입니다. 주어진 대본의 각 컷을 그림으로 만들기 위한 이미지 생성 프롬프트를 작성합니다. 인사말이나 서론 없이 즉시 작업합니다.
