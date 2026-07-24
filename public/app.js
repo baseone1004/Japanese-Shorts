@@ -3,8 +3,25 @@ const $ = (id) => document.getElementById(id);
 /** 마지막 실행 결과. 복사/CSV/모드 전달에서 재사용한다. */
 const state = { gen: null, trans: null, meta: null, imgp: null, disc: null };
 
+/**
+ * localStorage에서 JSON을 읽는다.
+ * 값이 깨져 있으면 앱 전체가 멈추므로(실제로 카테고리가 하나도 안 나오는 일이 있었다)
+ * 예외를 삼키고 기본값으로 돌아간 뒤 깨진 값은 지운다.
+ */
+function readJson(key, fallback) {
+  const raw = localStorage.getItem(key);
+  if (raw == null) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    console.warn(`[app] ${key} 값이 손상되어 초기화합니다.`);
+    localStorage.removeItem(key);
+    return fallback;
+  }
+}
+
 /** 발굴 기능으로 추가된 카테고리. 프리셋 전체를 서버로 함께 보낸다. */
-const customCategories = JSON.parse(localStorage.getItem('js:customCategories') ?? '{}');
+const customCategories = readJson('js:customCategories', {});
 
 // ─── 탭 ──────────────────────────────────────────────────────────────────
 
@@ -23,15 +40,18 @@ $('tabs').addEventListener('click', (e) => {
 
 async function loadCategories() {
   const { categories } = await (await fetch('/api/categories')).json();
-  const builtin = categories.map((c) => `<option value="${c.id}">${c.label}</option>`);
+  const builtin = categories.map((c) => `<option value="${esc(c.id)}">${esc(c.label)}</option>`);
+
   // 이전에 발굴해서 저장해 둔 카테고리를 목록 끝에 되살린다.
-  const custom = Object.entries(customCategories).map(
-    ([value, c]) => `<option value="${value}">⭐ ${esc(c.label)}</option>`,
-  );
+  // 저장된 값이 온전한지 확인한다 — 형태가 어긋난 항목이 섞이면 목록이 깨진다.
+  const custom = Object.entries(customCategories)
+    .filter(([, c]) => c && typeof c.label === 'string')
+    .map(([value, c]) => `<option value="${esc(value)}">⭐ ${esc(c.label)}</option>`);
+
   $('category').innerHTML = builtin.concat(custom).join('');
 
   const saved = localStorage.getItem('js:category');
-  if (saved && $('category').querySelector(`option[value="${CSS.escape(saved)}"]`)) {
+  if (saved && [...$('category').options].some((o) => o.value === saved)) {
     $('category').value = saved;
   }
 }
@@ -646,7 +666,42 @@ function flash(btn, text) {
 
 // ─── 시작 ────────────────────────────────────────────────────────────────
 
-loadCategories();
-loadCharacterSheet();
-loadAutoStatus();
-showTab(localStorage.getItem('js:tab') ?? 'gen');
+/**
+ * 시작 단계를 하나씩 독립적으로 실행한다.
+ * 예전에는 한 곳이 실패하면 나머지가 통째로 멈춰 카테고리조차 안 나왔고,
+ * 화면에는 아무 표시도 없어 원인을 알 수 없었다.
+ */
+async function boot() {
+  const steps = [
+    ['카테고리', loadCategories],
+    ['캐릭터 묘사', loadCharacterSheet],
+    ['자동화 상태', loadAutoStatus],
+  ];
+
+  const failed = [];
+  for (const [name, fn] of steps) {
+    try {
+      await fn();
+    } catch (err) {
+      console.error(`[app] ${name} 불러오기 실패:`, err);
+      failed.push(name);
+    }
+  }
+
+  try {
+    showTab(localStorage.getItem('js:tab') ?? 'gen');
+  } catch {
+    showTab('gen');
+  }
+
+  if (failed.length) {
+    const bar = document.createElement('div');
+    bar.className = 'bootfail';
+    bar.textContent =
+      `⚠ ${failed.join(', ')}을(를) 불러오지 못했습니다. ` +
+      '서버가 켜져 있는지 확인하고 Ctrl+Shift+R로 새로고침해 주세요.';
+    document.querySelector('main')?.prepend(bar);
+  }
+}
+
+boot();

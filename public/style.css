@@ -700,6 +700,17 @@ td.prompt-cell {
   font-size: 0.8rem;
 }
 
+/* 시작 실패 알림 — 조용히 비어 있는 화면보다 이유를 보여주는 편이 낫다 */
+.bootfail {
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.87rem;
+  line-height: 1.6;
+}
+
 /* 자동화 진행 로그 — 몇 분 걸리는 작업이라 단계가 보여야 안심된다 */
 .autolog {
   margin-top: 0.9rem;
