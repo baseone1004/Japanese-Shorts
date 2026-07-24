@@ -18,6 +18,8 @@ import {
   DEFAULT_CHARACTER_SHEET,
   buildDiscoverSystemPrompt,
   DISCOVER_SCHEMA,
+  buildBenchmarkSystemPrompt,
+  BENCHMARK_SCHEMA,
 } from './prompt.js';
 import { callClaude, assertConfigured, providerInfo, USING_KIE, MODEL } from './llm.js';
 import { listVoices, USING_TTS } from './tts.js';
@@ -305,6 +307,36 @@ app.post('/api/auto', async (req, res) => {
     send({ type: 'error', message: err?.message ?? String(err) });
   } finally {
     res.end();
+  }
+});
+
+// ── 모드 7: 벤치마크 (구조를 가져와 내 소재에 적용) ──────────────────────
+app.post('/api/benchmark', async (req, res) => {
+  try {
+    const category = validate(req);
+    const { count = 5, extraInstructions = '' } = req.body ?? {};
+
+    const n = Number(count);
+    if (!Number.isFinite(n) || n < 1 || n > 10) {
+      throw new HttpError(400, '제안 개수는 1~10 사이여야 합니다.');
+    }
+    requireApiKey();
+
+    const out = await callClaude({
+      system: buildBenchmarkSystemPrompt(category, extraInstructions),
+      userMessage:
+        `카테고리: ${labelOf(category)}\n` +
+        `잘 되는 쇼츠의 구조를 이 카테고리에 적용한 기획을 ${n}개 제안해줘.\n` +
+        '특정 채널이나 영상을 베끼지 말고, 구조만 가져와서 새로운 소재로 만들어줘.',
+      schema: BENCHMARK_SCHEMA,
+      validate: (r) =>
+        allFilled(r?.ideas, ['patternKo', 'whyWorksKo', 'topicKo', 'hookJa', 'differentiatorKo']) &&
+        r.ideas.every((x) => Array.isArray(x.beatsKo) && x.beatsKo.length >= 3),
+    });
+
+    res.json({ category: req.body?.category ?? 'general', categoryLabel: labelOf(category), ...out });
+  } catch (err) {
+    sendError(res, err);
   }
 });
 

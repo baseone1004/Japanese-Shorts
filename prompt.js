@@ -208,9 +208,9 @@ export const DEFAULT_CHARACTER_SHEET = `CHANNEL MASCOTS — always draw these th
 
 (3) RABBIT — small white rabbit with pink inner ears, popping up out of a black magician's top hat. The hat has a bright red inner lining and a small red ribbon on its side.
 
-ART STYLE — die-cut sticker look with a clean thick white outline around the whole group. Thick dark outlines on every shape, flat vivid colors, soft cel shading, no gradients or realistic texture. Cheerful and friendly mood.
+ART STYLE — soft pastel anime illustration. Gentle muted pastel palette (powder blue, soft peach, pale mint, light lavender, cream). Thin delicate line art in a soft warm brown rather than harsh black. Smooth airbrushed shading with gentle gradients, soft rim light, dreamy and cozy atmosphere. Slightly desaturated and low-contrast — nothing harsh or neon. Storybook picture-book quality.
 
-BACKGROUND — light sky-blue, decorated with small white four-point sparkles, a few yellow dots and one golden star.`;
+BACKGROUND — soft pastel gradient (pale sky-blue drifting into cream), with gentle bokeh circles, small white four-point sparkles and a few floating pastel dots. Keep the background simple and airy so the characters stay readable.`;
 
 const IMAGE_PROMPT_PROMPT = `[역할]
 당신은 유튜브 쇼츠용 이미지 생성 프롬프트를 쓰는 아트 디렉터입니다. 주어진 대본의 각 컷을 그림으로 만들기 위한 이미지 생성 프롬프트를 작성합니다. 인사말이나 서론 없이 즉시 작업합니다.
@@ -219,8 +219,12 @@ const IMAGE_PROMPT_PROMPT = `[역할]
 1. 대본의 컷 개수와 정확히 같은 수의 프롬프트를 만듭니다. 컷 순서를 그대로 따릅니다.
 2. 프롬프트는 반드시 **영어**로 씁니다. 이미지 생성 모델은 영어에서 가장 정확하게 동작합니다.
 3. 모든 프롬프트 맨 앞에 캐릭터 고정 묘사를 그대로 넣습니다. 매 컷 동일한 문장을 반복해야 캐릭터가 흔들리지 않습니다. 임의로 외모·의상·화풍을 바꾸지 마세요.
-4. 세로 9:16 구도임을 명시합니다. ("vertical 9:16 composition")
-5. 자막이 들어갈 여백을 화면 상단에 남기도록 지시합니다. 인물은 화면 중앙 안전영역에 두고, 머리나 팔다리가 화면 끝에서 잘리지 않게 합니다.
+4. 정사각형 1:1 구도임을 명시합니다. ("square 1:1 composition")
+   쇼츠는 세로 화면이지만, 정사각형 이미지를 화면 중앙에 배치하고 위아래를 자막·배경으로
+   채우는 편집이 흔합니다. 그래서 이미지 자체는 1:1로 만듭니다.
+5. 인물과 주요 소재를 화면 중앙에 여유 있게 배치하고, 머리나 팔다리가 화면 끝에서 잘리지 않게 합니다.
+   정사각형 이미지는 영상 중앙에 놓이고 자막은 그 위나 아래에 얹히므로, 이미지 안에 자막
+   여백을 따로 비워둘 필요는 없습니다. 대신 가장자리에 중요한 요소를 붙이지 마세요.
 6. 이미지 안에 글자가 렌더링되지 않도록 명시적으로 배제합니다. ("no text, no letters, no watermark") 자막은 편집 단계에서 넣습니다.
 7. 각 컷의 대사 내용에 맞는 표정·동작·소품·배경을 구체적으로 지시합니다. 대사를 그대로 번역해 넣지 말고, 그 장면에서 **화면에 무엇이 보여야 하는지**를 씁니다.
 8. sceneKo에는 그 컷에서 무엇을 그리는지 한국어로 한 줄 요약을 넣어, 작업자가 표만 보고도 파악할 수 있게 합니다.
@@ -256,6 +260,91 @@ export function buildImagePromptSystemPrompt(categoryId, characterSheet, extraIn
 [캐릭터 고정 묘사 — 모든 프롬프트 앞에 이 문장을 그대로 넣을 것]
 ${sheet}`;
   return joinParts(withCharacter, categoryId, extraInstructions, { includeHooks: false });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 모드 7: 벤치마크 — 잘 되는 쇼츠의 '구조'를 본인 소재에 적용한다.
+// 특정 채널을 베끼는 게 아니라 패턴만 가져온다.
+// ─────────────────────────────────────────────────────────────────────────
+
+const BENCHMARK_PROMPT = `[역할]
+당신은 일본 유튜브 쇼츠를 분석하는 콘텐츠 전략가입니다. 잘 되는 쇼츠들이 공통으로 쓰는 구조를 사용자의 카테고리에 적용해, 바로 촬영 가능한 기획을 제안합니다. 인사말이나 서론 없이 즉시 작업합니다.
+
+[⚠️ 정직성 규칙 — 가장 중요]
+당신은 실시간 유튜브 데이터나 현재 조회수 순위를 볼 수 없습니다. 따라서:
+- **특정 채널명이나 특정 영상을 지목하지 마세요.** "〇〇 채널이 이걸로 떴다" 같은 서술은
+  확인할 수 없는 거짓이 되기 쉽습니다.
+- "지금 급상승 중", "조회수 500만" 같이 **검증 불가능한 수치나 현재 상태를 단정하지 마세요.**
+- 대신 **왜 그 구조가 통하는지 원리**로 설명하세요. (완주율, 재시청, 댓글 유도, 알고리즘 친화성 등)
+- confidence에 근거의 견고함을 정직하게 표기하세요.
+
+[⚠️ 표절 금지 규칙]
+사용자는 남의 콘텐츠를 그대로 따라 하는 것을 원하지 않습니다.
+- 특정 영상의 소재·구성·대사를 그대로 옮기는 제안은 하지 마세요.
+- 가져오는 것은 **구조(포맷)** 뿐입니다. 예를 들어 "3초 질문 → 카운트다운 → 정답 공개"라는
+  뼈대는 누구나 쓰는 공용 문법이지만, 그 안에 들어가는 소재는 반드시 새로워야 합니다.
+- 각 제안의 소재는 사용자의 카테고리에서 독자적으로 만들어낸 것이어야 합니다.
+
+[제안 규칙]
+1. 요청받은 개수만큼 제안합니다. 서로 다른 구조를 써야 하며 소재도 겹치지 않아야 합니다.
+2. patternKo에는 그 구조가 무엇인지 한 줄로 씁니다. (예: "질문 던지고 정답을 끝에 공개")
+3. whyWorksKo에는 그 구조가 통하는 **원리**를 씁니다. 조회수 수치나 채널명은 쓰지 마세요.
+4. topicKo에는 그 구조를 적용한 **구체적인 한 편의 기획**을 씁니다. 바로 촬영 들어갈 수 있어야 합니다.
+5. hookJa에는 첫 3초에 쓸 일본어 훅을 씁니다.
+6. beatsKo에는 그 영상의 흐름을 3~5단계로 나눠 씁니다. (예: "훅 → 힌트 → 카운트다운 → 정답 → 댓글 유도")
+7. differentiatorKo에는 흔한 방식과 어떻게 다르게 만들지를 한 줄로 씁니다. 이게 표절을 피하는 핵심입니다.
+
+${LANG_SEPARATION_RULE}`;
+
+export const BENCHMARK_SCHEMA = {
+  type: 'object',
+  properties: {
+    ideas: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          patternKo: { type: 'string', description: '어떤 구조인지 한 줄 (한국어).' },
+          whyWorksKo: {
+            type: 'string',
+            description: '그 구조가 통하는 원리 (한국어, 2~3문장). 조회수·채널명 언급 금지.',
+          },
+          topicKo: { type: 'string', description: '그 구조를 적용한 구체적 기획 (한국어).' },
+          hookJa: { type: 'string', description: '첫 3초 훅 (일본어).' },
+          beatsKo: {
+            type: 'array',
+            description: '영상 흐름 3~5단계 (한국어).',
+            items: { type: 'string' },
+          },
+          differentiatorKo: {
+            type: 'string',
+            description: '흔한 방식과 어떻게 다르게 만들지 (한국어). 표절을 피하는 핵심.',
+          },
+          confidence: {
+            type: 'string',
+            enum: ['high', 'medium', 'low'],
+            description: '근거의 견고함. 추측성이면 low.',
+          },
+        },
+        required: [
+          'patternKo',
+          'whyWorksKo',
+          'topicKo',
+          'hookJa',
+          'beatsKo',
+          'differentiatorKo',
+          'confidence',
+        ],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['ideas'],
+  additionalProperties: false,
+};
+
+export function buildBenchmarkSystemPrompt(categoryId, extraInstructions = '') {
+  return joinParts(BENCHMARK_PROMPT, categoryId, extraInstructions, { includeHooks: false });
 }
 
 // ─────────────────────────────────────────────────────────────────────────

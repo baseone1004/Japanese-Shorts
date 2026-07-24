@@ -56,6 +56,9 @@
         <button class="tab" data-tab="auto">
           <span class="num">⚡ AUTO</span>한번에 만들기
         </button>
+        <button class="tab" data-tab="bench">
+          <span class="num">📈</span>벤치마크
+        </button>
         <button class="tab" data-tab="disc">
           <span class="num">＋</span>카테고리 발굴
         </button>
@@ -321,6 +324,43 @@
               <li>이미지 프롬프트로 그림을 만들어 컷 순서대로 배치</li>
               <li>BGM 깔고 볼륨 20~30%</li>
             </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- 📈 벤치마크 -->
+      <section class="panel tabpane" data-pane="bench" hidden>
+        <p class="pane-desc">
+          잘 되는 쇼츠의 <strong>구조</strong>를 가져와 내 카테고리 소재에 적용합니다.
+          각 기획에 "흔한 방식과 어떻게 다르게 할지"가 함께 나옵니다.
+        </p>
+
+        <div class="warnbox">
+          ⚠️ <strong>AI는 실시간 유튜브를 검색할 수 없습니다.</strong> 특정 채널을 찾아 분석하는
+          것이 아니라, 쇼츠에서 보편적으로 통하는 구조를 원리로 설명하고 새 소재에 적용합니다.
+          채널명·조회수를 지목하지 않도록 막아뒀습니다. 실제 반응은 직접 유튜브에서 확인하세요.
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="benchCount">제안 개수</label>
+            <input id="benchCount" type="number" value="5" min="1" max="10" />
+          </div>
+          <div class="field grow">
+            <label for="benchHint">방향 지정 (선택)</label>
+            <input id="benchHint" type="text" placeholder="예: 참여 유도 강한 것 / 편집 쉬운 것" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="runBench" class="primary">📈 구조 분석해서 기획 뽑기</button>
+        </div>
+        <p class="status" id="statusBench"></p>
+
+        <div class="results" id="resBench" hidden>
+          <div class="block">
+            <h2>제안된 기획</h2>
+            <div id="benchList" class="ideas"></div>
           </div>
         </div>
       </section>

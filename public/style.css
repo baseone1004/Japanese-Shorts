@@ -778,6 +778,34 @@ td.mono {
   color: var(--muted);
 }
 
+/* 벤치마크 — 구조와 흐름을 한눈에 */
+.bench-pattern {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 0.4rem;
+}
+
+.bench-beats {
+  font-size: 0.79rem;
+  color: var(--muted);
+  padding: 0.5rem 0.7rem;
+  background: var(--panel-3);
+  border-radius: var(--radius-sm);
+  line-height: 1.7;
+}
+
+.bench-diff {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  border-left: 2px solid var(--ko);
+  padding-left: 0.6rem;
+}
+
+.bench-diff strong {
+  color: var(--ko);
+}
+
 .use-idea {
   margin-top: 0.4rem;
   background: transparent;

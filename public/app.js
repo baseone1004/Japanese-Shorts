@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
 /** 마지막 실행 결과. 복사/CSV/모드 전달에서 재사용한다. */
-const state = { gen: null, trans: null, meta: null, imgp: null, disc: null };
+const state = { gen: null, trans: null, meta: null, imgp: null, disc: null, bench: null };
 
 /**
  * localStorage에서 JSON을 읽는다.
@@ -387,6 +387,47 @@ const JP_TAG = /\b(jp|ja|japan|japanese|nihon)\b/i;
 const isJapaneseVoice = (name) =>
   JP_SURNAME.test(name) || JP_GIVEN.test(name) || JP_TAG.test(name);
 
+/** 목소리 이름을 한글 발음으로 읽어준다. 목록에서 고르기 쉽도록. */
+const NAME_KO = {
+  miu: '미우', kobayashi: '코바야시', ryouta: '료타', ryota: '료타',
+  takahashi: '타카하시', ai: '아이', shimizu: '시미즈', mirei: '미레이',
+  kato: '카토', katou: '카토', miki: '미키', yamamoto: '야마모토',
+  hideo: '히데오', watanabe: '와타나베', yui: '유이', sato: '사토', satou: '사토',
+  daichi: '다이치', inoue: '이노우에', haruna: '하루나', suzuki: '스즈키',
+  sakura: '사쿠라', tanaka: '타나카', rin: '린', ishida: '이시다',
+  sora: '소라', hana: '하나', yuki: '유키', haru: '하루', haruto: '하루토',
+  akira: '아키라', aki: '아키', hinata: '히나타', ren: '렌', mei: '메이',
+  nao: '나오', riku: '리쿠', kenji: '켄지', takumi: '타쿠미', hiroshi: '히로시',
+  hiro: '히로', ayumi: '아유미', kaori: '카오리', misaki: '미사키',
+  yuna: '유나', yuma: '유마', kaito: '카이토', daiki: '다이키', shota: '쇼타',
+  ayaka: '아야카', momoka: '모모카', tsubasa: '츠바사', yamada: '야마다',
+  nakamura: '나카무라', ito: '이토', itou: '이토', matsumoto: '마츠모토',
+  kimura: '키무라', hayashi: '하야시', saito: '사이토',
+};
+
+const GENDER_KO = { female: '여성', male: '남성' };
+const AGE_KO = {
+  child: '어린이',
+  teenager: '10대',
+  young_adult: '청년',
+  middle_age: '중년',
+  elder: '노년',
+};
+
+/**
+ * "Sakura Tanaka" → "사쿠라 타나카 (Sakura Tanaka)"
+ * 읽는 법을 모르는 이름은 원문 그대로 둔다. 억지로 음차하면 오히려 헷갈린다.
+ */
+function voiceLabel(v) {
+  const ko = v.name
+    .split(/\s+/)
+    .map((part) => NAME_KO[part.toLowerCase()] ?? null);
+
+  const readable = ko.every(Boolean) ? `${ko.join(' ')} (${v.name})` : v.name;
+  const meta = [GENDER_KO[v.gender], AGE_KO[v.age]].filter(Boolean).join('·');
+  return meta ? `${readable} — ${meta}` : readable;
+}
+
 let allVoices = [];
 
 function renderVoices() {
@@ -398,7 +439,7 @@ function renderVoices() {
   const shown = list.length ? list : allVoices;
 
   sel.innerHTML = shown
-    .map((v) => `<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.gender ?? '')})</option>`)
+    .map((v) => `<option value="${esc(v.id)}">${esc(voiceLabel(v))}</option>`)
     .join('');
 
   const saved = localStorage.getItem(VOICE_KEY);
@@ -535,6 +576,59 @@ function renderAuto(r) {
   $('autoFiles').innerHTML = r.files.map((f) => `<li><code>${esc(f)}</code></li>`).join('');
   $('resAuto').hidden = false;
 }
+
+// ─── 📈 벤치마크 ─────────────────────────────────────────────────────────
+
+$('runBench').addEventListener('click', async () => {
+  const status = $('statusBench');
+  try {
+    const body = await post(
+      '/api/benchmark',
+      { count: Number($('benchCount').value), extraInstructions: $('benchHint').value },
+      status,
+      $('runBench'),
+      '구조 분석하는 중…',
+    );
+    state.bench = body;
+    renderBench(body.result.ideas);
+    setStatus(status, doneMsg(body, `${body.result.ideas.length}개 · `));
+  } catch (err) {
+    setStatus(status, err.message, 'error');
+  }
+});
+
+function renderBench(ideas) {
+  $('benchList').innerHTML = ideas
+    .map(
+      (x, i) => `
+      <div class="idea">
+        <div class="idea-head">
+          <span class="idea-label">${esc(x.topicKo)}</span>
+          <span class="idea-badges">
+            <span class="conf c-${x.confidence}">${CONF[x.confidence] ?? x.confidence}</span>
+          </span>
+        </div>
+        <p class="bench-pattern">📐 ${esc(x.patternKo)}</p>
+        <p class="idea-why">${esc(x.whyWorksKo)}</p>
+        <p class="idea-hooks">${esc(x.hookJa)}</p>
+        <p class="bench-beats">${x.beatsKo.map(esc).join(' → ')}</p>
+        <p class="bench-diff"><strong>차별화:</strong> ${esc(x.differentiatorKo)}</p>
+        <button class="use-idea" data-bench="${i}">이 기획으로 대본 만들기</button>
+      </div>`,
+    )
+    .join('');
+  $('resBench').hidden = false;
+}
+
+// 기획을 골라 ① 탭으로 넘긴다.
+$('benchList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-bench]');
+  if (!btn || !state.bench) return;
+  const idea = state.bench.result.ideas[Number(btn.dataset.bench)];
+  $('topic').value = idea.topicKo;
+  showTab('gen');
+  $('runGen').click();
+});
 
 // ─── ＋ 카테고리 발굴 ────────────────────────────────────────────────────
 
